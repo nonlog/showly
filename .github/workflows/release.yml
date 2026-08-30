@@ -7,6 +7,7 @@ on:
 
 jobs:
   verify-lint:
+    if: github.repository == 'trakt/showly'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -16,6 +17,7 @@ jobs:
         run: curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint && chmod a+x ktlint && ./ktlint
 
   verify-tests:
+    if: github.repository == 'trakt/showly'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -50,6 +52,7 @@ jobs:
         run: ./gradlew :ui-progress-movies:testDebugUnitTest
 
   release:
+    if: github.repository == 'trakt/showly'
     needs: [ verify-lint, verify-tests ]
     runs-on: ubuntu-latest
     steps:

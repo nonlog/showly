@@ -1,0 +1,81 @@
+name: Fork CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run ktlint
+        run: curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint && chmod a+x ktlint && ./ktlint
+
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare fork-safe debug configuration
+        shell: bash
+        run: |
+          cat > local.properties <<'EOF'
+          traktClientId="ci-placeholder"
+          traktClientSecret="ci-placeholder"
+          tmdbApiKey="ci-placeholder"
+          omdbApiKey="ci-placeholder"
+          EOF
+          cat > app/keystore.properties <<'EOF'
+          storePassword=ci-placeholder
+          keyPassword=ci-placeholder
+          keyAlias=ci-placeholder
+          EOF
+          : > app/keystore
+
+      - name: Run unit tests
+        run: >-
+          ./gradlew --no-daemon --stacktrace
+          :app:testDebugUnitTest
+          :repository:testDebugUnitTest
+          :ui-discover:testDebugUnitTest
+          :ui-trakt-sync:testDebugUnitTest
+          :ui-statistics:testDebugUnitTest
+          :ui-statistics-movies:testDebugUnitTest
+          :ui-search:testDebugUnitTest
+          :ui-progress-movies:testDebugUnitTest
+
+      - name: Build debug APK
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: showly-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
