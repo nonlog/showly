@@ -39,7 +39,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Prepare fork-safe debug configuration
         shell: bash
@@ -73,7 +73,7 @@ jobs:
         run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: showly-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/*.apk
