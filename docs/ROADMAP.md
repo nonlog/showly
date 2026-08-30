@@ -20,9 +20,10 @@ No business logic changes belong to S0.
 - [x] Produce and upload a debug APK artifact from GitHub Actions.
 - [x] Guard inherited upstream CI/release jobs so upstream-only secrets are never required in this fork.
 - [x] Keep release signing isolated and disabled until a separate protected fork release workflow is designed.
-- [x] Verify the baseline on GitHub Actions run `33319955346`.
+- [x] Verify the baseline on GitHub Actions run `33320407113` with current Node 24-compatible Gradle/artifact actions.
 
 See `docs/CI.md` for the verified contract and artifact details.
+
 ## S1 - Minimal Ryot connectivity
 
 - Add Ryot configuration state.

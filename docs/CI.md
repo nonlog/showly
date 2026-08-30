@@ -15,12 +15,12 @@ Runs on branch pushes, pull requests and manual dispatches.
 It performs:
 
 1. Kotlin formatting verification with the same ktlint 1.5.0 baseline used upstream.
-2. JDK 21 and Gradle setup on `ubuntu-latest`.
+2. JDK 21 and Gradle setup on `ubuntu-latest` using `gradle/actions/setup-gradle@v6`.
 3. Creation of runner-local placeholder `local.properties` values for Trakt, TMDB and OMDb build constants.
 4. Creation of runner-local placeholder keystore metadata and an empty keystore path so Gradle can configure the release signing block while only debug tasks are executed.
 5. The existing app/repository/UI unit-test suites used by upstream.
 6. `:app:assembleDebug`.
-7. Upload of the debug APK for 14 days.
+7. Upload of the debug APK for 14 days using `actions/upload-artifact@v7`.
 
 The placeholder values are intentionally non-secret and are created only inside the ephemeral GitHub Actions runner. They are never valid service credentials and are not committed to the repository.
 
@@ -38,9 +38,9 @@ Therefore those workflows retain their upstream meaning but are skipped inside `
 
 ## Verified baseline
 
-Verified on 2026-08-30 against `feat/ryot-foundation` commit `d10b00d26a930714b20d68c26981aa74ca102e3a`.
+Verified on 2026-08-30 against `feat/ryot-foundation` commit `baf1a8a27ab989851e0bce6fbb7b2df9722c4bfe`.
 
-GitHub Actions run: `33319955346`
+GitHub Actions run: `33320407113`
 
 Results:
 
@@ -48,8 +48,10 @@ Results:
 - all selected upstream unit-test tasks: passed;
 - debug APK build: passed;
 - artifact upload: passed;
-- artifact: `showly-debug-d10b00d26a930714b20d68c26981aa74ca102e3a`;
-- artifact digest: `sha256:4e9607fee3ff7014a8f26dd3dbfd45dafbd4d4c5c08ad820496923efc75c64c6`;
-- artifact size: 15,287,515 bytes.
+- artifact: `showly-debug-baf1a8a27ab989851e0bce6fbb7b2df9722c4bfe`;
+- artifact digest: `sha256:21df3a28ab7f8b9de5b856f554f00e87432c47a001f71fa4e267b5666545c194`;
+- artifact size: 15,287,526 bytes.
+
+The verification run completed without the Node 20 deprecation annotations seen with the older action majors.
 
 This is the S0.5 build/test baseline for subsequent Ryot work.
