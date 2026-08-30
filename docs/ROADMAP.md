@@ -14,12 +14,15 @@ No business logic changes belong to S0.
 
 ## S0.5 - Fork-safe GitHub CI
 
-- Add PR/feature-branch verification.
-- Remove the need for upstream signing/decryption secrets from debug/test builds.
-- Run lint and existing unit-test suites.
-- Produce a debug APK artifact from GitHub Actions.
-- Keep release signing isolated in protected secrets/workflows.
+- [x] Add PR/feature-branch verification with `.github/workflows/fork-ci.yml`.
+- [x] Remove the need for upstream signing/decryption secrets from debug/test builds by generating runner-local placeholder configuration.
+- [x] Run ktlint and the existing upstream unit-test suites.
+- [x] Produce and upload a debug APK artifact from GitHub Actions.
+- [x] Guard inherited upstream CI/release jobs so upstream-only secrets are never required in this fork.
+- [x] Keep release signing isolated and disabled until a separate protected fork release workflow is designed.
+- [x] Verify the baseline on GitHub Actions run `33319955346`.
 
+See `docs/CI.md` for the verified contract and artifact details.
 ## S1 - Minimal Ryot connectivity
 
 - Add Ryot configuration state.
