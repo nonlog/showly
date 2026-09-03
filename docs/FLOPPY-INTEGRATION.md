@@ -60,9 +60,9 @@ This lets the fork preserve mature Trakt synchronization while adding a self-hos
 
 S2 mirrors the actual Trakt history event stream rather than reconstructing history from Showly's local watched flags. This preserves every rewatch event and its original watched_at timestamp.
 
-Movie and episode history maintain separate Trakt history-id checkpoints. The checkpoint advances only after an event is successfully written, already present, or cannot be mapped because required external identity is missing. A Floppy/network failure leaves the current event uncheckpointed so the next Trakt sync retries it.
+Movie and episode history maintain separate Trakt history-id checkpoints. Trakt history pages are still scanned to completion because the API is ordered by watched time: a newly added backdated event can have a newer history ID on an older page. The checkpoint is therefore used as a local event filter, not as an unsafe early-pagination stop. It advances only after an event is successfully written, already present, or cannot be mapped because required external identity is missing. A Floppy/network failure leaves the current event uncheckpointed so the next Trakt sync retries it.
 
-Before writing, Showly reads the stable Floppy media detail response and compares existing consumptions[].end_date with the Trakt watched_at instant. Equivalent instants with different timezone offsets are treated as the same watch. This makes retries idempotent even if the app stops after the Floppy write but before persisting the checkpoint.
+Before writing, Showly reads the stable Floppy media detail response and compares existing consumptions[].end_date with the Trakt watched_at instant. A malformed successful detail response fails closed and is retried instead of being treated as an empty history. Equivalent instants with different timezone offsets are treated as the same watch. This makes retries idempotent even if the app stops after the Floppy write but before persisting the checkpoint.
 
 Changing the configured Floppy base URL or API key clears the history checkpoints. A new instance/account therefore bootstraps from Trakt history again, while consumption-time deduplication protects an existing account after token rotation.
 

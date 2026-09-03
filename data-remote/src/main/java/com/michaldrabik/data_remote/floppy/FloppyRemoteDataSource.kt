@@ -241,12 +241,14 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
   private fun containsWatchedAt(
     body: String,
     watchedAt: String,
-  ): Boolean =
-    runCatching { mediaDetailAdapter.fromJson(body) }
-      .getOrNull()
-      ?.consumptions
-      .orEmpty()
-      .any { sameFloppyInstant(it.endDate, watchedAt) }
+  ): Boolean {
+    val detail = try {
+      mediaDetailAdapter.fromJson(body)
+    } catch (error: Exception) {
+      throw IOException("Unable to parse Floppy media detail response", error)
+    } ?: throw IOException("Floppy media detail response was empty")
+    return detail.consumptions.any { sameFloppyInstant(it.endDate, watchedAt) }
+  }
 
   private fun getSyncConfig(): Pair<FloppyConfig, String> {
     val config = getConfig()
