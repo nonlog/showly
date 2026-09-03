@@ -46,19 +46,26 @@ jobs:
         env:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TMDB_READ_ACCESS_TOKEN: ${{ secrets.TMDB_READ_ACCESS_TOKEN }}
         run: |
           umask 077
           trakt_client_id="${TRAKT_CLIENT_ID:-ci-placeholder}"
           trakt_client_secret="${TRAKT_CLIENT_SECRET:-ci-placeholder}"
+          tmdb_read_access_token="${TMDB_READ_ACCESS_TOKEN:-ci-placeholder}"
           if [[ -n "$TRAKT_CLIENT_ID" && -n "$TRAKT_CLIENT_SECRET" ]]; then
             echo "Using fork-owned Trakt OAuth credentials."
           else
             echo "Using non-functional Trakt placeholders for this CI context."
           fi
+          if [[ -n "$TMDB_READ_ACCESS_TOKEN" ]]; then
+            echo "Using fork-owned TMDB Read Access Token."
+          else
+            echo "::warning::TMDB_READ_ACCESS_TOKEN is unavailable; posters and TMDB metadata will not load in this APK."
+          fi
           cat > local.properties <<EOF
           traktClientId="${trakt_client_id}"
           traktClientSecret="${trakt_client_secret}"
-          tmdbApiKey="ci-placeholder"
+          tmdbApiKey="${tmdb_read_access_token}"
           omdbApiKey="ci-placeholder"
           EOF
           cat > app/keystore.properties <<'EOF'

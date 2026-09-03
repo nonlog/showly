@@ -16,7 +16,7 @@ It performs:
 
 1. Kotlin formatting verification with the same ktlint 1.5.0 baseline used upstream.
 2. JDK 21 and Gradle setup on `ubuntu-latest` using `gradle/actions/setup-gradle@v6`.
-3. Creation of runner-local `local.properties`. Trusted fork builds use the fork-owned Trakt OAuth credentials from `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` repository secrets; contexts without those secrets fall back to non-functional placeholders. TMDB and OMDb remain placeholders until separately configured.
+3. Creation of runner-local `local.properties`. Trusted fork builds use the fork-owned Trakt OAuth credentials from `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` repository secrets; contexts without those secrets fall back to non-functional placeholders. TMDB uses the `TMDB_READ_ACCESS_TOKEN` repository secret when available; OMDb remains a placeholder until separately configured.
 4. Creation of runner-local placeholder keystore metadata and an empty keystore path so Gradle can configure the release signing block while only debug tasks are executed.
 5. The existing app/repository/UI unit-test suites used by upstream.
 6. `:app:assembleDebug`.
@@ -70,3 +70,8 @@ Results:
 The verification run completed without the Node 20 deprecation annotations seen with the older action majors.
 
 This is the S0.5 build/test baseline for subsequent Ryot work.
+
+
+## TMDB metadata credentials
+
+Showly loads posters and rich movie/show metadata directly from TMDB. The fork CI expects `TMDB_READ_ACCESS_TOKEN` to contain a TMDB API Read Access Token (v4 bearer token). Despite the upstream `tmdbApiKey` local.properties name, the runtime interceptor sends this value in the HTTP `Authorization: Bearer` header. Pull requests and other secret-less contexts still compile with a non-functional placeholder.
