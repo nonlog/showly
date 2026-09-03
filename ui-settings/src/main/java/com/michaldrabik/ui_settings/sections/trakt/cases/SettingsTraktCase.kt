@@ -32,6 +32,11 @@ class SettingsTraktCase @Inject constructor(
     }
   }
 
+  suspend fun enableTraktQuickRate(enable: Boolean) {
+    val settings = settingsRepository.load()
+    settingsRepository.update(settings.copy(traktQuickRateEnabled = enable))
+  }
+
   suspend fun enableTraktQuickRemove(enable: Boolean) {
     val settings = settingsRepository.load()
     settings.let {
