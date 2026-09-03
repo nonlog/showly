@@ -11,7 +11,7 @@ The long-term product should let a user keep watch history, watchlist, ratings, 
 The first implementation stages are intentionally narrow:
 
 - preserve existing Showly behavior and local data;
-- keep Trakt available;
+- keep Trakt available as a first-class backend using a fork-owned Trakt OAuth application;
 - add Ryot as an optional tracking backend;
 - configure a self-hosted Ryot base URL and credentials/integration details;
 - verify connectivity before enabling sync;

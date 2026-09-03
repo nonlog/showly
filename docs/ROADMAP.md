@@ -24,6 +24,13 @@ No business logic changes belong to S0.
 
 See `docs/CI.md` for the verified contract and artifact details.
 
+## S0.75 - Fork-owned Trakt OAuth identity
+
+- [x] Keep the upstream Trakt OAuth implementation and redirect contract intact.
+- [x] Allow trusted fork CI builds to inject `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` from GitHub Actions repository secrets.
+- [x] Preserve placeholder-only builds for pull requests and secret-less CI contexts.
+- [ ] Validate an end-to-end Trakt login using a GitHub-built APK after the repository secrets are installed.
+
 ## S1 - Minimal Ryot connectivity
 
 - Add Ryot configuration state.

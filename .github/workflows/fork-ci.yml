@@ -43,10 +43,21 @@ jobs:
 
       - name: Prepare fork-safe debug configuration
         shell: bash
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
         run: |
-          cat > local.properties <<'EOF'
-          traktClientId="ci-placeholder"
-          traktClientSecret="ci-placeholder"
+          umask 077
+          trakt_client_id="${TRAKT_CLIENT_ID:-ci-placeholder}"
+          trakt_client_secret="${TRAKT_CLIENT_SECRET:-ci-placeholder}"
+          if [[ -n "$TRAKT_CLIENT_ID" && -n "$TRAKT_CLIENT_SECRET" ]]; then
+            echo "Using fork-owned Trakt OAuth credentials."
+          else
+            echo "Using non-functional Trakt placeholders for this CI context."
+          fi
+          cat > local.properties <<EOF
+          traktClientId="${trakt_client_id}"
+          traktClientSecret="${trakt_client_secret}"
           tmdbApiKey="ci-placeholder"
           omdbApiKey="ci-placeholder"
           EOF
