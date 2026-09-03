@@ -98,6 +98,7 @@ class SettingsGeneralMainCase @Inject constructor(
   }
 
   fun getCountry() = AppCountry.fromCode(settingsRepository.country)
+
   fun getTheme() = AppTheme.fromName(settingsRepository.appTheme)
 
   fun setTheme(theme: AppTheme) {
