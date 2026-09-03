@@ -54,5 +54,4 @@ class SettingsWidgetsRepository @Inject constructor(
     }
     preferences.edit(true) { putString("$key$widgetId", calendarMode.name) }
   }
-
 }
