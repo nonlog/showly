@@ -50,11 +50,12 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     private const val KEY_API_KEY = "FLOPPY_API_KEY"
   }
 
-  override fun getConfig() = FloppyConfig(
-    enabled = preferences.getBoolean(KEY_ENABLED, false),
-    baseUrl = preferences.getString(KEY_BASE_URL, "").orEmpty(),
-    apiKey = preferences.getString(KEY_API_KEY, "").orEmpty(),
-  )
+  override fun getConfig() =
+    FloppyConfig(
+      enabled = preferences.getBoolean(KEY_ENABLED, false),
+      baseUrl = preferences.getString(KEY_BASE_URL, "").orEmpty(),
+      apiKey = preferences.getString(KEY_API_KEY, "").orEmpty(),
+    )
 
   override fun saveConfig(config: FloppyConfig) {
     preferences

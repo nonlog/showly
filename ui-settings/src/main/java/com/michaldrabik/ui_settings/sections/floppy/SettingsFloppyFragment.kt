@@ -60,8 +60,12 @@ class SettingsFloppyFragment : BaseFragment<SettingsFloppyViewModel>(R.layout.fr
       settingsFloppyTest.alpha = if (config.enabled) 1F else 0.5F
       settingsFloppyTestProgress.visibleIf(uiState.isTesting)
 
-      if (settingsFloppyBaseUrlInput.text?.toString() != config.baseUrl) settingsFloppyBaseUrlInput.setText(config.baseUrl)
-      if (settingsFloppyApiKeyInput.text?.toString() != config.apiKey) settingsFloppyApiKeyInput.setText(config.apiKey)
+      if (settingsFloppyBaseUrlInput.text?.toString() != config.baseUrl) {
+        settingsFloppyBaseUrlInput.setText(config.baseUrl)
+      }
+      if (settingsFloppyApiKeyInput.text?.toString() != config.apiKey) {
+        settingsFloppyApiKeyInput.setText(config.apiKey)
+      }
 
       settingsFloppyStatus.text = getString(
         when (uiState.status) {
