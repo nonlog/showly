@@ -135,7 +135,6 @@ class SettingsTraktFragment :
     }
   }
 
-
   private fun showQuickSyncConfirmationDialog() {
     MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialog)
       .setTitle(R.string.textSettingsQuickSyncConfirmationTitle)

@@ -103,6 +103,7 @@ class ProgressMoviesMainViewModelTest : BaseMockTest() {
     runTest {
       val job = launch(UnconfinedTestDispatcher()) { SUT.uiState.toList(stateResult) }
       coEvery { mainCase.addToMyMovies(any<Movie>(), null) } just Runs
+      coEvery { mainCase.isQuickRateEnabled() } returns false
 
       SUT.setWatchedMovie(Movie.EMPTY, null)
 

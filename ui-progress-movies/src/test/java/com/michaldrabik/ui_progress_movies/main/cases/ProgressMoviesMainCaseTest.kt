@@ -2,6 +2,7 @@ package com.michaldrabik.ui_progress_movies.main.cases
 
 import com.michaldrabik.repository.PinnedItemsRepository
 import com.michaldrabik.repository.movies.MoviesRepository
+import com.michaldrabik.repository.settings.SettingsRepository
 import com.michaldrabik.ui_base.trakt.quicksync.QuickSyncManager
 import com.michaldrabik.ui_model.IdTrakt
 import com.michaldrabik.ui_model.Ids
@@ -21,6 +22,7 @@ class ProgressMoviesMainCaseTest : BaseMockTest() {
   @RelaxedMockK lateinit var moviesRepository: MoviesRepository
   @RelaxedMockK lateinit var pinnedItemsRepository: PinnedItemsRepository
   @RelaxedMockK lateinit var quickSyncManager: QuickSyncManager
+  @RelaxedMockK lateinit var settingsRepository: SettingsRepository
 
   private lateinit var SUT: ProgressMoviesMainCase
 
@@ -31,6 +33,7 @@ class ProgressMoviesMainCaseTest : BaseMockTest() {
       moviesRepository,
       pinnedItemsRepository,
       quickSyncManager,
+      settingsRepository,
     )
   }
 
