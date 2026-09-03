@@ -6,7 +6,6 @@ import com.michaldrabik.ui_settings.helpers.WidgetTransparency
 
 data class SettingsWidgetsUiState(
   val settings: Settings? = null,
-  val themeWidgets: AppTheme? = AppTheme.DARK,
+  val themeWidgets: AppTheme = AppTheme.DARK,
   val widgetsTransparency: WidgetTransparency = WidgetTransparency.SOLID,
-  val isPremium: Boolean = false,
 )

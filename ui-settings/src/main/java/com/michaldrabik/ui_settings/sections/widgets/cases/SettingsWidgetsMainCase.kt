@@ -20,15 +20,36 @@ class SettingsWidgetsMainCase @Inject constructor(
       settingsRepository.load()
     }
 
+  fun getWidgetsTheme() = settingsRepository.widgets.widgetsTheme
+
+  fun getWidgetsTransparency() = settingsRepository.widgets.widgetsTransparency
+
+  fun setWidgetsTheme(
+    theme: Int,
+    context: Context,
+  ) {
+    settingsRepository.widgets.widgetsTheme = theme
+    requestWidgetsUpdate(context)
+  }
+
+  fun setWidgetsTransparency(
+    transparency: Int,
+    context: Context,
+  ) {
+    settingsRepository.widgets.widgetsTransparency = transparency
+    requestWidgetsUpdate(context)
+  }
+
   suspend fun enableWidgetsTitles(
     enable: Boolean,
     context: Context,
   ) {
     val settings = settingsRepository.load()
-    settings.let {
-      val new = it.copy(widgetsShowLabel = enable)
-      settingsRepository.update(new)
-    }
+    settingsRepository.update(settings.copy(widgetsShowLabel = enable))
+    requestWidgetsUpdate(context)
+  }
+
+  private fun requestWidgetsUpdate(context: Context) {
     (context.applicationContext as WidgetsProvider).run {
       requestShowsWidgetsUpdate()
       requestMoviesWidgetsUpdate()

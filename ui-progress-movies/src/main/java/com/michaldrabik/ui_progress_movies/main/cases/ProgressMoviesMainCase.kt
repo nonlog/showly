@@ -2,6 +2,7 @@ package com.michaldrabik.ui_progress_movies.main.cases
 
 import com.michaldrabik.repository.PinnedItemsRepository
 import com.michaldrabik.repository.movies.MoviesRepository
+import com.michaldrabik.repository.settings.SettingsRepository
 import com.michaldrabik.ui_base.trakt.quicksync.QuickSyncManager
 import com.michaldrabik.ui_model.IdTrakt
 import com.michaldrabik.ui_model.Ids
@@ -15,6 +16,7 @@ class ProgressMoviesMainCase @Inject constructor(
   private val moviesRepository: MoviesRepository,
   private val pinnedItemsRepository: PinnedItemsRepository,
   private val quickSyncManager: QuickSyncManager,
+  private val settingsRepository: SettingsRepository,
 ) {
 
   suspend fun addToMyMovies(
@@ -25,6 +27,8 @@ class ProgressMoviesMainCase @Inject constructor(
     pinnedItemsRepository.removePinnedItem(movie)
     quickSyncManager.scheduleMovies(listOf(movie.traktId), customDate)
   }
+
+  suspend fun isQuickRateEnabled() = settingsRepository.load().traktQuickRateEnabled
 
   suspend fun addToMyMovies(movieId: IdTrakt) {
     addToMyMovies(

@@ -3,6 +3,7 @@ package com.michaldrabik.ui_progress.main.cases
 import com.michaldrabik.common.dispatchers.CoroutineDispatchers
 import com.michaldrabik.data_local.sources.EpisodesLocalDataSource
 import com.michaldrabik.repository.EpisodesManager
+import com.michaldrabik.repository.settings.SettingsRepository
 import com.michaldrabik.repository.settings.SettingsSpoilersRepository
 import com.michaldrabik.ui_base.trakt.quicksync.QuickSyncManager
 import com.michaldrabik.ui_model.Episode
@@ -18,6 +19,7 @@ class ProgressMainEpisodesCase @Inject constructor(
   private val dispatchers: CoroutineDispatchers,
   private val episodesManager: EpisodesManager,
   private val quickSyncManager: QuickSyncManager,
+  private val settingsRepository: SettingsRepository,
   private val spoilersSettings: SettingsSpoilersRepository,
   private val localDataSource: EpisodesLocalDataSource,
 ) {
@@ -34,12 +36,13 @@ class ProgressMainEpisodesCase @Inject constructor(
     )
   }
 
+  suspend fun isQuickRateEnabled() = settingsRepository.load().traktQuickRateEnabled
+
   suspend fun isWatched(
     show: Show,
     episode: Episode,
-  ): Boolean {
-    return withContext(dispatchers.IO) {
-      // No need to query DB if spoilers settings are all off in that case.
+  ): Boolean =
+    withContext(dispatchers.IO) {
       if (!(
           spoilersSettings.isEpisodesTitleHidden ||
             spoilersSettings.isEpisodesDescriptionHidden ||
@@ -49,7 +52,6 @@ class ProgressMainEpisodesCase @Inject constructor(
       ) {
         return@withContext false
       }
-      return@withContext localDataSource.isEpisodeWatched(show.traktId, episode.ids.trakt.id)
+      localDataSource.isEpisodeWatched(show.traktId, episode.ids.trakt.id)
     }
-  }
 }

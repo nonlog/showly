@@ -19,4 +19,8 @@ data class OpenEpisodeDetails(
   val isWatched: Boolean,
 ) : Event<Episode>(episode)
 
+data class OpenQuickEpisodeRating(
+  val episode: Episode,
+) : Event<Episode>(episode)
+
 object RequestWidgetsUpdate : Event<Unit>(Unit)

@@ -11,6 +11,8 @@ import com.michaldrabik.ui_base.events.TraktSyncError
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
 import com.michaldrabik.ui_base.trakt.TraktSyncWorker
 import com.michaldrabik.ui_base.utilities.extensions.SUBSCRIBE_STOP_TIMEOUT
+import com.michaldrabik.ui_base.viewmodel.ChannelsDelegate
+import com.michaldrabik.ui_base.viewmodel.DefaultChannelsDelegate
 import com.michaldrabik.ui_model.CalendarMode
 import com.michaldrabik.ui_model.Movie
 import com.michaldrabik.ui_progress_movies.main.cases.ProgressMoviesMainCase
@@ -28,7 +30,8 @@ class ProgressMoviesMainViewModel @Inject constructor(
   private val moviesCase: ProgressMoviesMainCase,
   private val eventsManager: EventsManager,
   workManager: WorkManager,
-) : ViewModel() {
+) : ViewModel(),
+  ChannelsDelegate by DefaultChannelsDelegate() {
 
   private val timestampState = MutableStateFlow<Long?>(null)
   private val searchQueryState = MutableStateFlow<String?>(null)
@@ -38,9 +41,7 @@ class ProgressMoviesMainViewModel @Inject constructor(
   private var calendarMode = CalendarMode.PRESENT_FUTURE
 
   init {
-    viewModelScope.launch {
-      eventsManager.events.collect { onEvent(it) }
-    }
+    viewModelScope.launch { eventsManager.events.collect { onEvent(it) } }
     workManager.getWorkInfosByTagLiveData(TraktSyncWorker.TAG_ID).observeForever { work ->
       syncingState.value = work.any { it.state == WorkInfo.State.RUNNING }
     }
@@ -71,14 +72,15 @@ class ProgressMoviesMainViewModel @Inject constructor(
   ) {
     viewModelScope.launch {
       moviesCase.addToMyMovies(movie, customDate)
+      if (moviesCase.isQuickRateEnabled()) {
+        eventChannel.send(OpenQuickMovieRating(movie))
+      }
       timestampState.value = System.currentTimeMillis()
     }
   }
 
   private fun onEvent(event: Event) {
-    if (event in arrayOf(TraktSyncError, TraktSyncAuthError, TraktSyncSuccess)) {
-      loadProgress()
-    }
+    if (event in arrayOf(TraktSyncError, TraktSyncAuthError, TraktSyncSuccess)) loadProgress()
   }
 
   val uiState = combine(
@@ -86,12 +88,12 @@ class ProgressMoviesMainViewModel @Inject constructor(
     searchQueryState,
     calendarModeState,
     syncingState,
-  ) { s1, s2, s3, s4 ->
+  ) { timestamp, query, mode, syncing ->
     ProgressMoviesMainUiState(
-      timestamp = s1,
-      searchQuery = s2,
-      calendarMode = s3,
-      isSyncing = s4,
+      timestamp = timestamp,
+      searchQuery = query,
+      calendarMode = mode,
+      isSyncing = syncing,
     )
   }.stateIn(
     scope = viewModelScope,

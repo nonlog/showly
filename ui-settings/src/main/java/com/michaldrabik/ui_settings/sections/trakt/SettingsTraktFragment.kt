@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.core.content.ContextCompat
-import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import androidx.work.WorkInfo.State
 import androidx.work.WorkManager
@@ -23,9 +22,7 @@ import com.michaldrabik.ui_base.utilities.extensions.onClick
 import com.michaldrabik.ui_base.utilities.extensions.openWebUrl
 import com.michaldrabik.ui_base.utilities.extensions.visibleIf
 import com.michaldrabik.ui_base.utilities.viewBinding
-import com.michaldrabik.ui_model.PremiumFeature
 import com.michaldrabik.ui_model.TraktSyncSchedule.OFF
-import com.michaldrabik.ui_navigation.java.NavigationArgs.ARG_ITEM
 import com.michaldrabik.ui_settings.R
 import com.michaldrabik.ui_settings.databinding.FragmentSettingsTraktBinding
 import com.michaldrabik.ui_settings.sections.trakt.SettingsTraktUiEvent.RequestNotificationsPermission
@@ -91,12 +88,8 @@ class SettingsTraktFragment :
         settingsTraktAuthorizeIcon.visibleIf(isSignedInTrakt)
 
         settingsTraktQuickRateSwitch.isChecked = settings?.traktQuickRateEnabled ?: false
-        settingsTraktQuickRate.alpha = if (isPremium) 1F else 0.5F
-        settingsTraktQuickRate.onClick { view ->
-          openPremiumScreen(view.tag)
-        }
-        if (isPremium) {
-          settingsTraktQuickRateTitle.setCompoundDrawables(null, null, null, null)
+        settingsTraktQuickRate.onClick {
+          viewModel.enableQuickRate(!settingsTraktQuickRateSwitch.isChecked)
         }
 
         settingsTraktQuickRemoveSwitch.isChecked = settings?.traktQuickRemoveEnabled ?: false
@@ -142,16 +135,6 @@ class SettingsTraktFragment :
     }
   }
 
-  private fun openPremiumScreen(tag: Any?) {
-    val args = bundleOf()
-    if (tag != null) {
-      val feature = PremiumFeature.fromTag(requireContext(), tag.toString())
-      feature?.let {
-        args.putSerializable(ARG_ITEM, feature)
-      }
-    }
-    navigateTo(R.id.actionSettingsFragmentToPremium, args)
-  }
 
   private fun showQuickSyncConfirmationDialog() {
     MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialog)

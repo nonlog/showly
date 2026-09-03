@@ -100,6 +100,9 @@ class ProgressMainViewModel @Inject constructor(
         return@launch
       }
       episodesCase.setEpisodeWatched(bundle, customDate)
+      if (episodesCase.isQuickRateEnabled()) {
+        eventChannel.send(OpenQuickEpisodeRating(bundle.episode))
+      }
       timestampState.value = System.currentTimeMillis()
       scrollState.value = Event(false)
     }

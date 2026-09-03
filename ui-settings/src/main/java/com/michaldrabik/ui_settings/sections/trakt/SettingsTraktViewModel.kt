@@ -37,16 +37,12 @@ class SettingsTraktViewModel @Inject constructor(
   ChannelsDelegate by DefaultChannelsDelegate() {
 
   private val settingsState = MutableStateFlow<Settings?>(null)
-
-  private val premiumState = MutableStateFlow(false)
   private val signedInTraktState = MutableStateFlow(false)
   private val signingInState = MutableStateFlow(false)
   private val traktNameState = MutableStateFlow("")
 
   fun loadSettings() {
-    viewModelScope.launch {
-      refreshSettings()
-    }
+    viewModelScope.launch { refreshSettings() }
   }
 
   private suspend fun refreshSettings() {
@@ -58,11 +54,7 @@ class SettingsTraktViewModel @Inject constructor(
   fun startAuthorization(context: Context) {
     viewModelScope.launch {
       withApiAtLeast(33) {
-        val areNotificationsEnabled = NotificationManagerCompat
-          .from(context.applicationContext)
-          .areNotificationsEnabled()
-
-        if (!areNotificationsEnabled) {
+        if (!NotificationManagerCompat.from(context.applicationContext).areNotificationsEnabled()) {
           eventChannel.send(RequestNotificationsPermission)
           return@launch
         }
@@ -104,6 +96,13 @@ class SettingsTraktViewModel @Inject constructor(
     }
   }
 
+  fun enableQuickRate(enable: Boolean) {
+    viewModelScope.launch {
+      traktCase.enableTraktQuickRate(enable)
+      refreshSettings()
+    }
+  }
+
   fun enableQuickRemove(enable: Boolean) {
     viewModelScope.launch {
       traktCase.enableTraktQuickRemove(enable)
@@ -130,14 +129,12 @@ class SettingsTraktViewModel @Inject constructor(
     signingInState,
     signedInTraktState,
     traktNameState,
-    premiumState,
-  ) { s1, s2, s3, s4, s5 ->
+  ) { settings, signingIn, signedIn, username ->
     SettingsTraktUiState(
-      settings = s1,
-      isSigningIn = s2,
-      isSignedInTrakt = s3,
-      traktUsername = s4,
-      isPremium = s5,
+      settings = settings,
+      isSigningIn = signingIn,
+      isSignedInTrakt = signedIn,
+      traktUsername = username,
     )
   }.stateIn(
     scope = viewModelScope,

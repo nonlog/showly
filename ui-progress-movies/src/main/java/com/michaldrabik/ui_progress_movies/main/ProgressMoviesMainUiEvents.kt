@@ -11,4 +11,8 @@ data class MovieCheckActionUiEvent(
   val dateSelectionType: ProgressDateSelectionType,
 ) : Event<Movie>(movie)
 
+data class OpenQuickMovieRating(
+  val movie: Movie,
+) : Event<Movie>(movie)
+
 object RequestWidgetsUpdate : Event<Unit>(Unit)

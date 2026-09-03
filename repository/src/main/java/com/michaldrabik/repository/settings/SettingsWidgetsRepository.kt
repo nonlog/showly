@@ -23,15 +23,11 @@ class SettingsWidgetsRepository @Inject constructor(
   }
 
   var widgetsTheme: Int
-    get() {
-      return UiModeManager.MODE_NIGHT_YES
-    }
+    get() = preferences.getInt(THEME_WIDGET, UiModeManager.MODE_NIGHT_YES)
     set(value) = preferences.edit(true) { putInt(THEME_WIDGET, value) }
 
   var widgetsTransparency: Int
-    get() {
-      return 100
-    }
+    get() = preferences.getInt(THEME_WIDGET_TRANSPARENT, 100)
     set(value) = preferences.edit(true) { putInt(THEME_WIDGET_TRANSPARENT, value) }
 
   fun getWidgetCalendarMode(
@@ -59,8 +55,4 @@ class SettingsWidgetsRepository @Inject constructor(
     preferences.edit(true) { putString("$key$widgetId", calendarMode.name) }
   }
 
-  fun revokePremium() {
-    widgetsTheme = UiModeManager.MODE_NIGHT_YES
-    widgetsTransparency = 100
-  }
 }

@@ -7,5 +7,4 @@ data class SettingsTraktUiState(
   val isSignedInTrakt: Boolean = false,
   val isSigningIn: Boolean = false,
   val traktUsername: String = "",
-  val isPremium: Boolean = false,
 )

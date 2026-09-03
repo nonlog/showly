@@ -21,6 +21,8 @@ import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottom
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet.Companion.REQUEST_DATE_SELECTION
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet.Companion.RESULT_DATE_SELECTION
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet.Result
+import com.michaldrabik.ui_base.common.sheets.ratings.RatingsBottomSheet
+import com.michaldrabik.ui_base.common.sheets.ratings.RatingsBottomSheet.Options.Type
 import com.michaldrabik.ui_base.utilities.events.Event
 import com.michaldrabik.ui_base.utilities.extensions.add
 import com.michaldrabik.ui_base.utilities.extensions.dimenToPx
@@ -386,6 +388,15 @@ class ProgressMainFragment :
 
   private fun handleEvent(event: Event<*>) {
     when (event) {
+      is OpenQuickEpisodeRating -> {
+        val bundle = RatingsBottomSheet.createBundle(
+          id = event.episode.ids.trakt,
+          type = Type.EPISODE,
+          seasonNumber = event.episode.season,
+          episodeNumber = event.episode.number,
+        )
+        navigateToSafe(R.id.actionProgressFragmentToRating, bundle)
+      }
       is OpenEpisodeDetails -> {
         val bundle = EpisodeDetailsBottomSheet.createBundle(
           showIds = event.show.ids,

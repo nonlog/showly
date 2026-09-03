@@ -20,6 +20,9 @@ import com.michaldrabik.ui_base.common.sheets.context_menu.ContextMenuBottomShee
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet.Companion.REQUEST_DATE_SELECTION
 import com.michaldrabik.ui_base.common.sheets.date_selection.DateSelectionBottomSheet.Result
+import com.michaldrabik.ui_base.common.sheets.ratings.RatingsBottomSheet
+import com.michaldrabik.ui_base.common.sheets.ratings.RatingsBottomSheet.Options.Type
+import com.michaldrabik.ui_base.utilities.events.Event
 import com.michaldrabik.ui_base.utilities.extensions.add
 import com.michaldrabik.ui_base.utilities.extensions.dimenToPx
 import com.michaldrabik.ui_base.utilities.extensions.disableUi
@@ -89,6 +92,7 @@ class ProgressMoviesMainFragment :
 
     launchAndRepeatStarted(
       { viewModel.uiState.collect { render(it) } },
+      { viewModel.eventFlow.collect { handleEvent(it) } },
       doAfterLaunch = { viewModel.loadProgress() },
     )
   }
@@ -326,6 +330,15 @@ class ProgressMoviesMainFragment :
 
   private fun onScrollReset() =
     childFragmentManager.fragments.forEach { (it as? OnScrollResetListener)?.onScrollReset() }
+
+  private fun handleEvent(event: Event<*>) {
+    when (event) {
+      is OpenQuickMovieRating -> {
+        val bundle = RatingsBottomSheet.createBundle(event.movie.ids.trakt, Type.MOVIE)
+        navigateToSafe(R.id.actionProgressMoviesFragmentToRating, bundle)
+      }
+    }
+  }
 
   private fun render(uiState: ProgressMoviesMainUiState) {
     with(binding) {
