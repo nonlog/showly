@@ -18,6 +18,7 @@ import com.michaldrabik.ui_settings.databinding.FragmentSettingsBinding
 import com.michaldrabik.ui_settings.sections.spoilers.SettingsSpoilersFragment
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.BACKUP
+import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.FLOPPY
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.GENERAL
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.MISC
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.NOTIFICATIONS
@@ -94,6 +95,7 @@ class SettingsFragment :
   private fun renderFiltered(filter: SettingsFilter?) {
     with(binding) {
       settingsCategoryTrakt.visibleIf(filter == TRAKT || filter == null)
+      settingsCategoryFloppy.visibleIf(filter == FLOPPY || filter == null)
       settingsCategoryGeneral.visibleIf(filter == GENERAL || filter == null)
       settingsCategoryNotifications.visibleIf(filter == NOTIFICATIONS || filter == null)
       settingsCategorySpoilers.visibleIf(filter == SPOILERS || filter == null)

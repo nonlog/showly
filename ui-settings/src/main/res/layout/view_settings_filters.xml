@@ -32,6 +32,13 @@
         />
 
       <com.google.android.material.chip.Chip
+        android:id="@+id/floppyChip"
+        style="@style/ShowlyChip.Filter"
+        android:checkable="true"
+        android:text="@string/textSettingsFloppy"
+        />
+
+      <com.google.android.material.chip.Chip
         android:id="@+id/generalChip"
         style="@style/ShowlyChip.Filter"
         android:checkable="true"

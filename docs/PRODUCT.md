@@ -2,46 +2,36 @@
 
 ## Goal
 
-Add a self-hosted Ryot tracking backend to Showly while keeping the fork maintainable against `trakt/showly`.
+Keep Trakt.tv as a first-class Showly backend while adding Floppy as an optional self-hosted tracking store.
 
-The long-term product should let a user keep watch history, watchlist, ratings, lists, and related personal tracking data in a Ryot instance instead of requiring Trakt to be the sole source of truth.
+The fork uses its own Trakt OAuth application identity. Floppy complements Trakt instead of impersonating it or replacing the existing Trakt API implementation.
 
-## S0/S1 scope
+## S1 scope
 
-The first implementation stages are intentionally narrow:
-
-- preserve existing Showly behavior and local data;
-- keep Trakt available as a first-class backend using a fork-owned Trakt OAuth application;
-- add Ryot as an optional tracking backend;
-- configure a self-hosted Ryot base URL and credentials/integration details;
-- verify connectivity before enabling sync;
-- add tracking operations incrementally, starting with watched state/history;
+- preserve existing Showly local data and Trakt behavior;
+- configure an optional Floppy base URL and user API key;
+- validate a Floppy instance with its stable /api/v1 contract;
+- report disabled, connected, unauthorized, unreachable, and invalid configuration states;
 - keep GitHub Actions as the canonical build and verification environment.
+
+## Later sync direction
+
+After connectivity is proven, Showly can use its existing Trakt sync to refresh local state and mirror supported tracking changes from the local model into Floppy. Floppy-originated changes may be synchronized back only after conflict, timestamp, deletion, and duplicate-history rules are documented and tested.
 
 ## Non-goals for the first stages
 
 - Removing Trakt from the application.
-- Replacing every catalog/discovery endpoint with TMDB/TVDB immediately.
-- Renaming all Trakt-specific classes and UI in one refactor.
-- Migrating the existing Room database away from Trakt IDs in the first patch.
-- Reimplementing the Trakt API or pretending Ryot is a Trakt-compatible server.
-- Depending on Ryot internal database IDs in Showly's domain model.
+- Reusing upstream Showly Trakt credentials.
+- Pretending Floppy is a Trakt-compatible server.
+- Replacing every catalog/discovery endpoint immediately.
+- Migrating the existing Room database away from Trakt IDs in S1.
+- Depending on Floppy internal database IDs in Showly's domain model.
 
 ## Product principles
 
-1. **Upstream compatibility first.** Changes should be isolated and small enough that upstream merges remain practical.
-2. **User data ownership.** Ryot should be able to become the authoritative tracking store without making the Android app dependent on one hosted service.
-3. **Provider-neutral boundaries.** New code should express tracking operations rather than Ryot-specific UI/business concepts where practical.
-4. **External identity over server-internal identity.** Prefer TMDB, TVDB and IMDb identifiers, plus season/episode coordinates, at integration boundaries.
-5. **Local-first UX remains intact.** Network failures must not make ordinary browsing or local state unusable.
-6. **No destructive migration without a dedicated stage.** The current database is deeply keyed by Trakt IDs; replacing that identity model is a separate project milestone.
-
-## Initial acceptance criteria
-
-S1 is complete when a clean GitHub build can:
-
-- show an optional Ryot configuration entry;
-- save a self-hosted server URL securely enough for the existing app model;
-- validate the server/authentication path;
-- report a clear connected/error state;
-- leave all existing Trakt and local behavior unchanged when Ryot is disabled.
+1. **Trakt stays first-class.** Existing OAuth and sync behavior remains intact.
+2. **Self-hosting stays optional.** Floppy failures must not break normal local or Trakt use.
+3. **External identity at boundaries.** Prefer TMDB, TVDB, IMDb, media type, season, and episode coordinates when talking to Floppy.
+4. **Small upstream conflict surface.** Add isolated provider code rather than rewriting stable Trakt paths.
+5. **No silent two-master sync.** Bidirectional sync ships only with explicit conflict semantics.
+6. **GitHub-first development.** GitHub is source of truth and GitHub Actions is the canonical build/test environment.

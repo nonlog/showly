@@ -2,61 +2,40 @@
 
 ## Baseline
 
-Fork baseline: `trakt/showly` `master` at `ec897b65b1b55c18ce24a755f83f894f422e559a`.
+Fork baseline: trakt/showly master at ec897b65b1b55c18ce24a755f83f894f422e559a.
 
-Showly is already split into `data-local`, `data-remote`, `repository`, UI feature modules, and dedicated Trakt sync code. That modularity is useful, but the current boundary is not simply "metadata vs tracking".
+Showly is deeply Trakt-oriented: Trakt supplies catalog data as well as user tracking, the Room schema is keyed heavily by Trakt IDs, and existing sync queues/logs encode Trakt concepts. This fork therefore keeps stable Trakt behavior and adds Floppy at an isolated boundary.
 
-### Current observations
-
-- `TraktRemoteDataSource` supplies substantial catalog functionality: shows, movies, seasons, discovery feeds, related media, comments, people credits, search, translations and authentication.
-- `AuthorizedTraktRemoteDataSource` owns user-specific operations: profile, history, watched state, watchlist, lists, ratings, hidden/dropped items and comments.
-- `UserTraktManager`, `TraktSyncRunner`, `ui-trakt-sync`, settings screens and multiple UI helpers are explicitly Trakt-oriented.
-- The local data model is deeply keyed by Trakt IDs. Examples include `IdTrakt`, `fromTraktId`, `getAllTraktIds`, and local watchlist/my-show records keyed by a Trakt ID.
-- Existing Trakt sync queue/log tables also encode provider-specific naming.
-
-This means replacing Trakt with Ryot in one pass would combine an API migration, local database identity migration, catalog migration and UI refactor. S0 explicitly rejects that approach.
-
-## Staged target
+## Target
 
 ```mermaid
 flowchart TD
     UI[Showly UI] --> R[Repositories / use cases]
     R --> L[Existing local database]
-    R --> C[Catalog services]
-    R --> T[Tracking boundary]
-    C --> TraktCatalog[Existing Trakt catalog paths]
-    C --> TMDB[TMDB / other existing sources]
-    T --> TraktTracking[Trakt tracking]
-    T --> RyotTracking[Ryot tracking]
+    R --> T[Existing Trakt paths]
+    R --> F[Floppy tracking adapter]
+    T <--> Trakt[Trakt.tv]
+    F <--> Floppy[Self-hosted Floppy]
 ```
 
-The diagram is an intended direction, not a claim that the current code already has these interfaces.
+Trakt remains a first-class backend using the fork-owned OAuth application. Floppy is optional and must never make local/Trakt operations fail when the self-hosted server is offline.
 
-## Integration boundary
+## S1 connection boundary
 
-Introduce provider-neutral concepts only where they reduce coupling. A tentative boundary is:
+S1 intentionally avoids a dynamic Retrofit framework. Floppy has a user-configured base URL, so the connection probe uses the existing base OkHttp client with absolute URLs:
 
-```kotlin
-interface TrackingProvider {
-  suspend fun validateConnection(): TrackingAccount
-  suspend fun addHistory(items: List<TrackingItem>)
-  suspend fun removeHistory(items: List<TrackingItem>)
-  suspend fun getHistory(...): List<TrackingHistoryItem>
-  suspend fun addWatchlist(items: List<TrackingItem>)
-  suspend fun removeWatchlist(items: List<TrackingItem>)
-  suspend fun setRating(item: TrackingItem, rating: Int)
-}
-```
+1. GET /api/v1/info/ verifies that the configured service is reachable.
+2. GET /api/v1/user/preferences/ with X-API-Key verifies the user API key.
 
-The exact shape must follow real Showly call sites and Ryot capabilities; do not introduce an abstract framework before a vertical slice proves it useful.
+The base OkHttp client has no debug BODY logging interceptor, so the Floppy API key is not emitted to logs. Runtime configuration is stored in the existing network SharedPreferences model; no Floppy credential belongs in source control or CI.
 
 ## Media identity strategy
 
-The existing local database continues to use Trakt IDs during the early Ryot stages. New integration-facing code should carry a richer identity object:
+The early local database continues to use Trakt IDs. Integration-facing code must carry richer external identity:
 
 ```text
 MediaIdentity
-- traktId?   (legacy/current local key)
+- traktId?  (legacy/current local key)
 - tmdbId?
 - tvdbId?
 - imdbId?
@@ -64,24 +43,19 @@ MediaIdentity
 - season? / episode?
 ```
 
-Rules:
-
-- Never make a Ryot internal metadata/database ID the canonical Showly identity.
-- Prefer TMDB for movie/show matching when available; retain TVDB/IMDb as fallbacks.
-- Episode identity must include the parent show identity plus season/episode coordinates when an episode-specific external ID is unavailable.
-- A future local-database identity migration, if still desirable, gets its own schema design, migrations, rollback plan and tests.
+Floppy requests should prefer TMDB for movies/shows, retain TVDB/IMDb fallbacks, and identify episodes by parent show plus season/episode when necessary. Floppy internal database IDs must never become Showly's canonical identity.
 
 ## Sync direction
 
-Early stages should be explicit rather than magical:
+The first write slice will be explicit:
 
-1. Existing Showly local mutation occurs.
-2. Existing Trakt behavior remains unchanged unless the user changes settings.
-3. When Ryot is enabled for a supported operation, an isolated Ryot adapter mirrors or reads that tracking state.
-4. Conflict resolution is added only after both read and write paths are verified.
+1. Existing Showly/Trakt sync refreshes local state.
+2. A Floppy adapter reads the relevant local change/state.
+3. The adapter writes the equivalent Floppy operation using external IDs.
+4. Failures are retryable and observable without rolling back the local or Trakt action.
 
-Do not silently make two remote systems mutually authoritative. A later milestone must define per-provider source-of-truth rules and timestamps.
+Two-way synchronization is deferred until timestamp, deletion, conflict, and duplicate-history semantics are specified.
 
 ## Build architecture
 
-GitHub is the source of truth. Local clones may be used as disposable editing/debug clients, but reproducibility is defined by GitHub Actions. The upstream Android workflow currently decrypts repository secrets, so a fork-safe CI workflow must be established before relying on it for release artifacts.
+GitHub is the source of truth. GitHub Actions is the canonical build and verification environment. Local workspaces are not required for this fork's development workflow.

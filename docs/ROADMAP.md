@@ -2,74 +2,63 @@
 
 ## S0 - Fork initialization and architecture discovery
 
-- [x] Create `nonlog/showly` as a real GitHub fork of `trakt/showly`.
-- [x] Record upstream baseline and default branch.
-- [x] Audit Trakt remote, repository, sync, identity and local-storage coupling.
-- [x] Define product scope and non-goals.
-- [x] Define staged identity/provider direction.
-- [x] Add agent/upstream maintenance rules.
-- [ ] Verify documentation against the first deployed Ryot instance during S1.
-
-No business logic changes belong to S0.
+- [x] Create nonlog/showly as a real fork of trakt/showly.
+- [x] Record the upstream baseline.
+- [x] Audit Trakt remote, repository, sync, identity, and local-storage coupling.
+- [x] Define provider-neutral external identity rules.
 
 ## S0.5 - Fork-safe GitHub CI
 
-- [x] Add PR/feature-branch verification with `.github/workflows/fork-ci.yml`.
-- [x] Remove the need for upstream signing/decryption secrets from debug/test builds by generating runner-local placeholder configuration.
-- [x] Run ktlint and the existing upstream unit-test suites.
-- [x] Produce and upload a debug APK artifact from GitHub Actions.
-- [x] Guard inherited upstream CI/release jobs so upstream-only secrets are never required in this fork.
-- [x] Keep release signing isolated and disabled until a separate protected fork release workflow is designed.
-- [x] Verify the baseline on GitHub Actions run `33320407113` with current Node 24-compatible Gradle/artifact actions.
-
-See `docs/CI.md` for the verified contract and artifact details.
+- [x] Add branch/PR verification and debug APK artifacts.
+- [x] Guard inherited upstream-only release jobs.
+- [x] Keep GitHub Actions as the canonical build environment.
 
 ## S0.75 - Fork-owned Trakt OAuth identity
 
-- [x] Keep the upstream Trakt OAuth implementation and redirect contract intact.
-- [x] Allow trusted fork CI builds to inject `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` from GitHub Actions repository secrets.
-- [x] Preserve placeholder-only builds for pull requests and secret-less CI contexts.
-- [ ] Validate an end-to-end Trakt login using a GitHub-built APK after the repository secrets are installed.
+- [x] Keep the upstream Trakt OAuth implementation and showly2://trakt redirect contract.
+- [x] Inject TRAKT_CLIENT_ID and TRAKT_CLIENT_SECRET from GitHub Actions repository secrets for trusted builds.
+- [x] Preserve non-functional placeholders for secret-less CI contexts.
+- [x] Produce a successful GitHub Actions APK build using the fork-owned Trakt OAuth credentials.
+- [ ] Validate end-to-end Trakt login on-device with the GitHub-built APK.
 
-## S1 - Minimal Ryot connectivity
+## S1 - Minimal Floppy connectivity
 
-- Add Ryot configuration state.
-- Add base URL validation and normalized URL handling.
-- Validate the deployed v10 authentication/API contract.
-- Implement connection/account test.
-- Add tests for disabled, connected, unauthorized and unreachable states.
+- [x] Validate the deployed Floppy v26.8.27 authentication contract.
+- [x] Add persisted Floppy enable/base URL/API-key configuration.
+- [x] Add normalized URL validation.
+- [x] Add public reachability check through /api/v1/info/.
+- [x] Add authenticated connection check through /api/v1/user/preferences/ using X-API-Key.
+- [x] Add settings UI and clear connection states.
+- [x] Add focused data-remote tests to fork CI.
+- [ ] Verify the GitHub Actions build and test the settings screen against a real user API token.
 
-## S2 - Watched/history vertical slice
+## S2 - Trakt to Floppy watched/history vertical slice
 
 - Introduce the minimum tracking adapter boundary required by real call sites.
-- Write movie watched/history to Ryot.
-- Write episode watched/history to Ryot.
-- Preserve existing local/Trakt behavior when Ryot is disabled.
-- Add retry/idempotency tests.
+- After Trakt sync refreshes local state, export movie history to Floppy.
+- Export episode watched/history to Floppy.
+- Use TMDB/external IDs at the Floppy boundary, never Floppy internal row IDs.
+- Add idempotency/deduplication tests before background retry.
 
-## S3 - Read sync and library state
+## S3 - Watchlist, ratings, and lists
 
-- Read watched/history from Ryot.
-- Add watchlist read/write.
-- Add ratings read/write.
-- Define initial bootstrap behavior.
+- Mirror watchlist state.
+- Mirror ratings.
+- Map custom lists where semantics match.
+- Define initial bootstrap/import behavior.
 
-## S4 - Background synchronization and conflicts
+## S4 - Bidirectional synchronization
 
-- Define source-of-truth modes.
-- Define timestamp/deletion/duplicate-history semantics.
-- Add durable queue/retry behavior for Ryot.
-- Add manual and background sync UX.
+- Define authoritative-source modes.
+- Define timestamp, deletion/tombstone, and duplicate rewatch semantics.
+- Add durable Floppy queue/retry behavior.
+- Add manual/background sync UX.
+- Only then evaluate Floppy-originated changes flowing back through Showly local state to Trakt.
 
 ## S5 - Additional user data
 
-Evaluate lists, collections, hidden/dropped state, notes/comments and any Ryot-specific semantic differences. Implement only capabilities that map cleanly.
+Evaluate hidden/dropped state, notes/comments, playback progress, and other capabilities only where both providers map cleanly.
 
 ## S6 - Deeper decoupling (optional)
 
-Only after the Ryot tracking path is stable:
-
-- evaluate replacing Trakt catalog/discovery calls with other providers;
-- evaluate a provider-neutral local media key;
-- design and test Room migrations if Trakt ID is no longer acceptable as the local key;
-- rename legacy Trakt-specific UI/classes where doing so materially reduces maintenance cost.
+Only after dual-backend tracking is stable, evaluate catalog decoupling and a provider-neutral local media key as separate migration projects.

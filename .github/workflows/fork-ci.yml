@@ -72,6 +72,7 @@ jobs:
         run: >-
           ./gradlew --no-daemon --stacktrace
           :app:testDebugUnitTest
+          :data-remote:testDebugUnitTest
           :repository:testDebugUnitTest
           :ui-discover:testDebugUnitTest
           :ui-trakt-sync:testDebugUnitTest

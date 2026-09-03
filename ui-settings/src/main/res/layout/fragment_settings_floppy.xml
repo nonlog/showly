@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  tools:theme="@style/AppTheme"
+  >
+
+  <TextView
+    android:id="@+id/settingsCategoryFloppy"
+    style="@style/Settings.Category"
+    android:layout_marginTop="@dimen/spaceNormal"
+    android:text="@string/textSettingsFloppy"
+    app:layout_constraintBottom_toTopOf="@id/settingsFloppyEnabled"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    />
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/settingsFloppyEnabled"
+    style="@style/Settings.ItemLayout"
+    app:layout_constraintBottom_toTopOf="@id/settingsFloppyBaseUrlLayout"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/settingsCategoryFloppy"
+    >
+
+    <TextView
+      android:id="@+id/settingsFloppyEnabledTitle"
+      style="@style/Settings.Title"
+      android:text="@string/textSettingsFloppyEnabledTitle"
+      app:layout_constraintBottom_toTopOf="@id/settingsFloppyEnabledSummary"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintVertical_chainStyle="packed"
+      />
+
+    <TextView
+      android:id="@+id/settingsFloppyEnabledSummary"
+      style="@style/Settings.Summary"
+      android:layout_marginEnd="@dimen/spaceSmall"
+      android:text="@string/textSettingsFloppyEnabledSummary"
+      app:layout_constrainedWidth="true"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintEnd_toStartOf="@id/settingsFloppyEnabledSwitch"
+      app:layout_constraintHorizontal_bias="0"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/settingsFloppyEnabledTitle"
+      />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+      android:id="@+id/settingsFloppyEnabledSwitch"
+      android:layout_width="wrap_content"
+      android:layout_height="0dp"
+      android:background="@null"
+      android:clickable="false"
+      app:layout_constraintBottom_toBottomOf="@id/settingsFloppyEnabled"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="@id/settingsFloppyEnabled"
+      />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/settingsFloppyBaseUrlLayout"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/spaceNormal"
+    android:layout_marginTop="@dimen/spaceSmall"
+    android:layout_marginEnd="@dimen/spaceNormal"
+    android:hint="@string/textSettingsFloppyBaseUrlTitle"
+    app:boxBackgroundMode="outline"
+    app:helperText="@string/textSettingsFloppyBaseUrlSummary"
+    app:layout_constraintBottom_toTopOf="@id/settingsFloppyApiKeyLayout"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/settingsFloppyEnabled"
+    >
+
+    <com.google.android.material.textfield.TextInputEditText
+      android:id="@+id/settingsFloppyBaseUrlInput"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="textUri"
+      android:maxLines="1"
+      android:singleLine="true"
+      />
+
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/settingsFloppyApiKeyLayout"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/spaceNormal"
+    android:layout_marginTop="@dimen/spaceSmall"
+    android:layout_marginEnd="@dimen/spaceNormal"
+    android:hint="@string/textSettingsFloppyApiKeyTitle"
+    app:boxBackgroundMode="outline"
+    app:endIconMode="password_toggle"
+    app:helperText="@string/textSettingsFloppyApiKeySummary"
+    app:layout_constraintBottom_toTopOf="@id/settingsFloppyTest"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/settingsFloppyBaseUrlLayout"
+    >
+
+    <com.google.android.material.textfield.TextInputEditText
+      android:id="@+id/settingsFloppyApiKeyInput"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="textPassword"
+      android:maxLines="1"
+      android:singleLine="true"
+      />
+
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/settingsFloppyTest"
+    style="@style/Settings.ItemLayout"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/settingsFloppyApiKeyLayout"
+    >
+
+    <TextView
+      android:id="@+id/settingsFloppyTestTitle"
+      style="@style/Settings.Title"
+      android:text="@string/textSettingsFloppyTestTitle"
+      app:layout_constraintBottom_toTopOf="@id/settingsFloppyStatus"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintVertical_chainStyle="packed"
+      />
+
+    <TextView
+      android:id="@+id/settingsFloppyStatus"
+      style="@style/Settings.Summary"
+      android:layout_marginEnd="@dimen/spaceSmall"
+      app:layout_constrainedWidth="true"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintEnd_toStartOf="@id/settingsFloppyTestProgress"
+      app:layout_constraintHorizontal_bias="0"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/settingsFloppyTestTitle"
+      tools:text="Connected"
+      />
+
+    <ProgressBar
+      android:id="@+id/settingsFloppyTestProgress"
+      style="@style/ProgressBar.Accent"
+      android:layout_width="24dp"
+      android:layout_height="24dp"
+      android:visibility="gone"
+      app:layout_constraintBottom_toBottomOf="@id/settingsFloppyTest"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="@id/settingsFloppyTest"
+      tools:visibility="visible"
+      />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

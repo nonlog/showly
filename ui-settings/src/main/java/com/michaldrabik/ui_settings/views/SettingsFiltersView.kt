@@ -11,6 +11,7 @@ import com.google.android.material.chip.Chip
 import com.michaldrabik.ui_base.utilities.extensions.onClick
 import com.michaldrabik.ui_settings.databinding.ViewSettingsFiltersBinding
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.BACKUP
+import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.FLOPPY
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.GENERAL
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.MISC
 import com.michaldrabik.ui_settings.views.SettingsFiltersView.SettingsFilter.NOTIFICATIONS
@@ -38,6 +39,10 @@ class SettingsFiltersView : FrameLayout {
     with(binding) {
       traktChip.onClick(safe = false) {
         selectedFilter = if (selectedFilter == TRAKT) null else TRAKT
+        onFilterClick?.invoke(selectedFilter)
+      }
+      floppyChip.onClick(safe = false) {
+        selectedFilter = if (selectedFilter == FLOPPY) null else FLOPPY
         onFilterClick?.invoke(selectedFilter)
       }
       generalChip.onClick(safe = false) {
@@ -80,6 +85,7 @@ class SettingsFiltersView : FrameLayout {
 
   enum class SettingsFilter {
     TRAKT,
+    FLOPPY,
     GENERAL,
     NOTIFICATIONS,
     SPOILERS,
