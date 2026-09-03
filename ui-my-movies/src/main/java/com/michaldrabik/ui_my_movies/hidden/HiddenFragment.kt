@@ -10,10 +10,9 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.michaldrabik.common.Config
 import com.michaldrabik.repository.settings.SettingsViewModeRepository
 import com.michaldrabik.ui_base.BaseFragment
-import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.ListViewMode
 import com.michaldrabik.ui_base.common.OnScrollResetListener
 import com.michaldrabik.ui_base.common.OnSearchClickListener
 import com.michaldrabik.ui_base.common.sheets.sort_order.SortOrderBottomSheet
@@ -75,6 +74,7 @@ class HiddenFragment :
     super.onViewCreated(view, savedInstanceState)
     setupInsets()
     setupRecycler()
+    viewModel.setViewMode(ListViewMode.fromName(settings.hiddenMoviesViewMode))
 
     launchAndRepeatStarted(
       { parentViewModel.uiState.collect { viewModel.onParentState(it) } },
@@ -85,7 +85,7 @@ class HiddenFragment :
 
   private fun setupRecycler() {
     layoutManager = CollectionMovieLayoutManagerProvider
-      .provideLayoutManger(requireContext(), LIST_NORMAL, tabletGridSpanSize)
+      .provideLayoutManger(requireContext(), ListViewMode.fromName(settings.hiddenMoviesViewMode), tabletGridSpanSize)
     adapter = CollectionAdapter(
       itemClickListener = { openMovieDetails(it.movie) },
       itemLongClickListener = { openMovieMenu(it.movie) },
@@ -93,7 +93,7 @@ class HiddenFragment :
       genreChipClickListener = ::openGenresDialog,
       missingImageListener = viewModel::loadMissingImage,
       missingTranslationListener = viewModel::loadMissingTranslation,
-      listViewChipClickListener = { (requireParentFragment() as? FollowedMoviesFragment)?.openPremium() },
+      listViewChipClickListener = ::cycleViewMode,
       upcomingChipVisible = false,
       upcomingChipClickListener = {},
       listChangeListener = {
@@ -124,6 +124,13 @@ class HiddenFragment :
     }
   }
 
+  private fun cycleViewMode() {
+    val current = adapter?.listViewMode ?: ListViewMode.fromName(settings.hiddenMoviesViewMode)
+    val next = current.next()
+    settings.hiddenMoviesViewMode = next.name
+    viewModel.setViewMode(next)
+  }
+
   private fun render(uiState: HiddenUiState) {
     uiState.run {
       viewMode.let {
@@ -146,9 +153,7 @@ class HiddenFragment :
         (layoutManager as? GridLayoutManager)?.withSpanSizeLookup { pos ->
           when (adapter?.getItems()?.get(pos)) {
             is FiltersItem -> {
-              when (viewMode) {
-                LIST_NORMAL -> if (isTablet) tabletGridSpanSize else Config.LISTS_GRID_SPAN
-              }
+              (layoutManager as GridLayoutManager).spanCount
             }
             is MovieItem -> {
               1

@@ -11,10 +11,9 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView.Adapter.StateRestorationPolicy
 import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.michaldrabik.common.Config.LISTS_GRID_SPAN
 import com.michaldrabik.repository.settings.SettingsViewModeRepository
 import com.michaldrabik.ui_base.BaseFragment
-import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.ListViewMode
 import com.michaldrabik.ui_base.common.OnScrollResetListener
 import com.michaldrabik.ui_base.common.OnSearchClickListener
 import com.michaldrabik.ui_base.common.sheets.sort_order.SortOrderBottomSheet
@@ -79,6 +78,7 @@ class HiddenFragment :
     super.onViewCreated(view, savedInstanceState)
     setupInsets()
     setupRecycler()
+    viewModel.setViewMode(ListViewMode.fromName(settings.hiddenShowsViewMode))
 
     launchAndRepeatStarted(
       { parentViewModel.uiState.collect { viewModel.onParentState(it) } },
@@ -89,14 +89,14 @@ class HiddenFragment :
 
   private fun setupRecycler() {
     layoutManager = CollectionShowLayoutManagerProvider
-      .provideLayoutManger(requireContext(), LIST_NORMAL, tabletGridSpanSize)
+      .provideLayoutManger(requireContext(), ListViewMode.fromName(settings.hiddenShowsViewMode), tabletGridSpanSize)
     adapter = CollectionAdapter(
       itemClickListener = { openShowDetails(it.show) },
       itemLongClickListener = { item -> openShowMenu(item.show) },
       sortChipClickListener = ::openSortOrderDialog,
       missingImageListener = viewModel::loadMissingImage,
       missingTranslationListener = viewModel::loadMissingTranslation,
-      listViewChipClickListener = { (requireParentFragment() as? FollowedShowsFragment)?.openPremium() },
+      listViewChipClickListener = ::cycleViewMode,
       networksChipClickListener = ::openNetworksDialog,
       genresChipClickListener = ::openGenresDialog,
       upcomingChipClickListener = {},
@@ -131,6 +131,13 @@ class HiddenFragment :
     }
   }
 
+  private fun cycleViewMode() {
+    val current = adapter?.listViewMode ?: ListViewMode.fromName(settings.hiddenShowsViewMode)
+    val next = current.next()
+    settings.hiddenShowsViewMode = next.name
+    viewModel.setViewMode(next)
+  }
+
   private fun render(uiState: HiddenUiState) {
     uiState.run {
       with(binding) {
@@ -151,9 +158,7 @@ class HiddenFragment :
           (layoutManager as? GridLayoutManager)?.withSpanSizeLookup { pos ->
             when (adapter?.getItems()?.get(pos)) {
               is FiltersItem -> {
-                when (viewMode) {
-                  LIST_NORMAL -> if (isTablet) tabletGridSpanSize else LISTS_GRID_SPAN
-                }
+                (layoutManager as GridLayoutManager).spanCount
               }
               is ShowItem -> {
                 1

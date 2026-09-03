@@ -227,6 +227,10 @@ class ListDetailsViewModel @Inject constructor(
     }
   }
 
+  fun setViewMode(mode: ListViewMode) {
+    viewModeState.value = mode
+  }
+
   val uiState = combine(
     listDetailsState,
     listItemsState,

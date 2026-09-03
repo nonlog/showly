@@ -23,7 +23,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.michaldrabik.common.Mode
 import com.michaldrabik.repository.settings.SettingsViewModeRepository
 import com.michaldrabik.ui_base.BaseFragment
-import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.ListViewMode
 import com.michaldrabik.ui_base.common.sheets.sort_order.SortOrderBottomSheet
 import com.michaldrabik.ui_base.utilities.extensions.add
 import com.michaldrabik.ui_base.utilities.extensions.dimenToPx
@@ -33,7 +33,6 @@ import com.michaldrabik.ui_base.utilities.extensions.enableUi
 import com.michaldrabik.ui_base.utilities.extensions.fadeIf
 import com.michaldrabik.ui_base.utilities.extensions.fadeOut
 import com.michaldrabik.ui_base.utilities.extensions.launchAndRepeatStarted
-import com.michaldrabik.ui_base.utilities.extensions.navigateToSafe
 import com.michaldrabik.ui_base.utilities.extensions.onClick
 import com.michaldrabik.ui_base.utilities.extensions.requireParcelable
 import com.michaldrabik.ui_base.utilities.extensions.visibleIf
@@ -51,7 +50,6 @@ import com.michaldrabik.ui_lists.details.recycler.helpers.ListDetailsLayoutManag
 import com.michaldrabik.ui_lists.details.recycler.helpers.ListDetailsListItemDecoration
 import com.michaldrabik.ui_lists.details.views.ListDetailsDeleteConfirmView
 import com.michaldrabik.ui_model.CustomList
-import com.michaldrabik.ui_model.PremiumFeature
 import com.michaldrabik.ui_model.SortOrder
 import com.michaldrabik.ui_model.SortOrder.DATE_ADDED
 import com.michaldrabik.ui_model.SortOrder.NAME
@@ -62,7 +60,6 @@ import com.michaldrabik.ui_model.SortOrder.RATING
 import com.michaldrabik.ui_model.SortOrder.USER_RATING
 import com.michaldrabik.ui_model.SortType
 import com.michaldrabik.ui_navigation.java.NavigationArgs
-import com.michaldrabik.ui_navigation.java.NavigationArgs.ARG_ITEM
 import com.michaldrabik.ui_navigation.java.NavigationArgs.ARG_LIST
 import com.michaldrabik.ui_navigation.java.NavigationArgs.ARG_MOVIE_ID
 import com.michaldrabik.ui_navigation.java.NavigationArgs.ARG_SELECTED_SORT_ORDER
@@ -121,6 +118,7 @@ class ListDetailsFragment :
     setupView()
     setupInsets()
     setupRecycler()
+    viewModel.setViewMode(ListViewMode.fromName(settings.customListsViewMode))
 
     launchAndRepeatStarted(
       { viewModel.uiState.collect { render(it) } },
@@ -164,10 +162,7 @@ class ListDetailsFragment :
         translationY = headerTranslation
       }
       fragmentListDetailsManageButton.onClick { toggleReorderMode() }
-      fragmentListDetailsViewModeButton.onClick {
-        val args = bundleOf(ARG_ITEM to PremiumFeature.VIEW_TYPES)
-        navigateToSafe(R.id.actionListDetailsFragmentToPremium, args)
-      }
+      fragmentListDetailsViewModeButton.onClick { cycleViewMode() }
     }
   }
 
@@ -182,7 +177,7 @@ class ListDetailsFragment :
 
   private fun setupRecycler() {
     layoutManager = ListDetailsLayoutManagerProvider
-      .provideLayoutManger(requireContext(), LIST_NORMAL, tabletGridSpanSize)
+      .provideLayoutManger(requireContext(), ListViewMode.fromName(settings.customListsViewMode), tabletGridSpanSize)
     adapter = ListDetailsAdapter(
       itemClickListener = { openItemDetails(it) },
       missingImageListener = { item: ListDetailsItem, force: Boolean ->
@@ -303,8 +298,22 @@ class ListDetailsFragment :
     }
   }
 
+  private fun cycleViewMode() {
+    if (isReorderMode) return
+    val current = adapter?.listViewMode ?: ListViewMode.fromName(settings.customListsViewMode)
+    val next = current.next()
+    settings.customListsViewMode = next.name
+    viewModel.setViewMode(next)
+  }
+
   private fun toggleReorderMode() {
     isReorderMode = !isReorderMode
+    val mode = if (isReorderMode) {
+      ListViewMode.LIST_NORMAL
+    } else {
+      ListViewMode.fromName(settings.customListsViewMode)
+    }
+    viewModel.setViewMode(mode)
     viewModel.setReorderMode(list.id, isReorderMode)
   }
 
@@ -334,7 +343,9 @@ class ListDetailsFragment :
             }
             fragmentListDetailsViewModeButton.setImageResource(
               when (it) {
-                LIST_NORMAL -> R.drawable.ic_view_list
+                ListViewMode.LIST_NORMAL -> R.drawable.ic_view_list
+                ListViewMode.LIST_COMPACT -> R.drawable.ic_view_compact
+                ListViewMode.GRID -> R.drawable.ic_view_grid
               },
             )
           }

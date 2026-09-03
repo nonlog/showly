@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  tools:parentTag="android.widget.FrameLayout">
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/mediaMovieGridRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/gridSpacing">
+
+    <ImageView
+      android:id="@+id/mediaMovieGridImage"
+      android:layout_width="0dp"
+      android:layout_height="0dp"
+      android:background="@drawable/bg_media_view_elevation"
+      android:elevation="@dimen/elevationSmall"
+      app:layout_constraintDimensionRatio="2:3"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+      android:id="@+id/mediaMovieGridPlaceholder"
+      android:layout_width="52dp"
+      android:layout_height="52dp"
+      android:layout_gravity="center"
+      android:visibility="gone"
+      app:layout_constraintBottom_toBottomOf="@id/mediaMovieGridImage"
+      app:layout_constraintEnd_toEndOf="@id/mediaMovieGridImage"
+      app:layout_constraintStart_toStartOf="@id/mediaMovieGridImage"
+      app:layout_constraintTop_toTopOf="@id/mediaMovieGridImage"
+      app:srcCompat="@drawable/ic_film"
+      app:tint="?attr/colorPlaceholderIcon"
+      tools:visibility="visible" />
+
+    <ProgressBar
+      android:id="@+id/mediaMovieGridProgress"
+      style="@style/ProgressBar.Dark"
+      android:layout_width="28dp"
+      android:layout_height="28dp"
+      android:visibility="gone"
+      app:layout_constraintBottom_toBottomOf="@id/mediaMovieGridImage"
+      app:layout_constraintEnd_toEndOf="@id/mediaMovieGridImage"
+      app:layout_constraintStart_toStartOf="@id/mediaMovieGridImage"
+      app:layout_constraintTop_toTopOf="@id/mediaMovieGridImage"
+      tools:visibility="visible" />
+
+    <TextView
+      android:id="@+id/mediaMovieGridTitle"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="6dp"
+      android:ellipsize="end"
+      android:maxLines="2"
+      android:minLines="2"
+      android:textColor="?android:attr/textColorPrimary"
+      android:textSize="13sp"
+      android:textStyle="bold"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/mediaMovieGridImage"
+      tools:text="The Matrix" />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+</merge>

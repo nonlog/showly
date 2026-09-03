@@ -138,6 +138,10 @@ class WatchlistViewModel @Inject constructor(
       else -> Unit
     }
 
+  fun setViewMode(mode: ListViewMode) {
+    viewModeState.value = mode
+  }
+
   val uiState = combine(
     itemsState,
     sortOrderState,

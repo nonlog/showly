@@ -8,25 +8,17 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ItemDecoration
-import com.michaldrabik.ui_base.utilities.extensions.isTablet
-import com.michaldrabik.ui_my_shows.myshows.recycler.MyShowsAdapter
-import com.michaldrabik.ui_my_shows.myshows.recycler.MyShowsItem
+import com.michaldrabik.ui_base.common.views.media.ShowCompactItemView
+import com.michaldrabik.ui_base.common.views.media.ShowGridItemView
 import com.michaldrabik.ui_my_shows.myshows.views.MyShowAllView
+import com.michaldrabik.ui_my_shows.myshows.recycler.MyShowsAdapter
 
-class MyShowsListItemDecoration : ItemDecoration {
+class MyShowsListItemDecoration(
+  context: Context,
+  @DimenRes spacingDimen: Int,
+) : ItemDecoration() {
 
-  private var spacing: Int
-  private var halfSpacing: Int
-  private val isTablet: Boolean
-
-  constructor(
-    context: Context,
-    @DimenRes spacingDimen: Int,
-  ) {
-    this.spacing = context.resources.getDimensionPixelSize(spacingDimen)
-    this.halfSpacing = spacing / 2
-    this.isTablet = context.isTablet()
-  }
+  private val spacing = context.resources.getDimensionPixelSize(spacingDimen)
 
   override fun getItemOffsets(
     outRect: Rect,
@@ -34,56 +26,37 @@ class MyShowsListItemDecoration : ItemDecoration {
     parent: RecyclerView,
     state: RecyclerView.State,
   ) {
-    if (view !is MyShowAllView) {
-      return
-    }
-    if (!isTablet && (parent.layoutManager is LinearLayoutManager)) {
-      getItemOffsetsPhone(outRect, view)
-      return
-    }
-    if (isTablet && (parent.layoutManager is GridLayoutManager)) {
-      getItemOffsetsTablet(outRect, view, parent)
-      return
+    if (!isMediaView(view)) return
+
+    outRect.top = spacing
+    outRect.bottom = spacing
+
+    when (val manager = parent.layoutManager) {
+      is GridLayoutManager -> {
+        val totalSpan = manager.spanCount
+        val column = getPosition(parent, view).coerceAtLeast(0) % totalSpan
+        outRect.left = (spacing * 2) * column / totalSpan
+        outRect.right = (spacing * 2) * ((totalSpan - 1) - column) / totalSpan
+      }
+      is LinearLayoutManager -> {
+        outRect.left = 0
+        outRect.right = 0
+      }
     }
   }
 
-  private fun getItemOffsetsTablet(
-    outRect: Rect,
-    view: View,
-    parent: RecyclerView,
-  ) {
-    if (view is MyShowAllView) {
-      outRect.top = spacing
-      outRect.bottom = spacing
-    }
-
-    val totalSpan = (parent.layoutManager as GridLayoutManager).spanCount
-    val column = getPosition(parent, view) % totalSpan
-
-    outRect.left = (spacing * 2) * column / totalSpan
-    outRect.right = (spacing * 2) * ((totalSpan - 1) - column) / totalSpan
-  }
-
-  private fun getItemOffsetsPhone(
-    outRect: Rect,
-    view: View,
-  ) {
-    if (view is MyShowAllView) {
-      outRect.top = spacing
-      outRect.bottom = spacing
-    }
-    outRect.left = 0
-    outRect.right = 0
-  }
+  private fun isMediaView(view: View) =
+    view is MyShowAllView ||
+      view is ShowCompactItemView<*> ||
+      view is ShowGridItemView<*>
 
   private fun getPosition(
     parent: RecyclerView,
     view: View,
   ): Int {
-    val nonMyShowItemCount = (parent.adapter as MyShowsAdapter)
+    val nonMediaItemCount = (parent.adapter as MyShowsAdapter)
       .getItems()
-      .count { it.type != MyShowsItem.Type.ALL_SHOWS_ITEM }
-
-    return parent.getChildAdapterPosition(view) - nonMyShowItemCount
+      .count { it.type != com.michaldrabik.ui_my_shows.myshows.recycler.MyShowsItem.Type.ALL_SHOWS_ITEM }
+    return parent.getChildAdapterPosition(view) - nonMediaItemCount
   }
 }

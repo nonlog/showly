@@ -11,10 +11,9 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView.Adapter.StateRestorationPolicy
 import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.michaldrabik.common.Config.LISTS_GRID_SPAN
 import com.michaldrabik.repository.settings.SettingsViewModeRepository
 import com.michaldrabik.ui_base.BaseFragment
-import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.ListViewMode
 import com.michaldrabik.ui_base.common.OnScrollResetListener
 import com.michaldrabik.ui_base.common.OnSearchClickListener
 import com.michaldrabik.ui_base.common.sheets.sort_order.SortOrderBottomSheet
@@ -82,6 +81,7 @@ class MyShowsFragment :
     super.onViewCreated(view, savedInstanceState)
     setupInsets()
     setupRecycler()
+    viewModel.setViewMode(ListViewMode.fromName(settings.myShowsViewMode))
 
     launchAndRepeatStarted(
       { parentViewModel.uiState.collect { viewModel.onParentState(it) } },
@@ -91,13 +91,17 @@ class MyShowsFragment :
   }
 
   private fun setupRecycler() {
-    layoutManager = MyShowsLayoutManagerProvider.provideLayoutManger(requireContext(), LIST_NORMAL, tabletGridSpanSize)
+    layoutManager = MyShowsLayoutManagerProvider.provideLayoutManger(
+      requireContext(),
+      ListViewMode.fromName(settings.myShowsViewMode),
+      tabletGridSpanSize,
+    )
     adapter = MyShowsAdapter(
       itemClickListener = { openShowDetails(it.show) },
       itemLongClickListener = { item -> openShowMenu(item.show) },
       onSortOrderClickListener = { section, order, type -> openSortOrderDialog(section, order, type) },
       onTypeClickListener = { navigateToSafe(R.id.actionFollowedShowsFragmentToMyShowsFilters) },
-      onListViewModeClickListener = { (requireParentFragment() as? FollowedShowsFragment)?.openPremium() },
+      onListViewModeClickListener = ::cycleViewMode,
       onNetworksClickListener = ::openNetworksDialog,
       onGenresClickListener = ::openGenresDialog,
       missingImageListener = { item, force -> viewModel.loadMissingImage(item as MyShowsItem, force) },
@@ -132,6 +136,13 @@ class MyShowsFragment :
     }
   }
 
+  private fun cycleViewMode() {
+    val current = adapter?.listViewMode ?: ListViewMode.fromName(settings.myShowsViewMode)
+    val next = current.next()
+    settings.myShowsViewMode = next.name
+    viewModel.setViewMode(next)
+  }
+
   private fun render(uiState: MyShowsUiState) {
     uiState.run {
       with(binding) {
@@ -154,9 +165,7 @@ class MyShowsFragment :
             val item = adapter?.getItems()?.get(pos)
             when (item?.type) {
               RECENT_SHOWS, ALL_SHOWS_HEADER -> {
-                when (viewMode) {
-                  LIST_NORMAL -> if (isTablet) tabletGridSpanSize else LISTS_GRID_SPAN
-                }
+                (layoutManager as GridLayoutManager).spanCount
               }
               ALL_SHOWS_ITEM -> {
                 1

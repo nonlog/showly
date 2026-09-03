@@ -5,10 +5,14 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.michaldrabik.ui_base.common.ListViewMode
+import com.michaldrabik.ui_base.common.ListViewMode.GRID
+import com.michaldrabik.ui_base.common.ListViewMode.LIST_COMPACT
 import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
 import com.michaldrabik.ui_lists.details.helpers.ListItemDragListener
 import com.michaldrabik.ui_lists.details.helpers.ListItemSwipeListener
 import com.michaldrabik.ui_lists.details.helpers.ReorderListCallbackAdapter
+import com.michaldrabik.ui_lists.details.views.ListDetailsCompactItemView
+import com.michaldrabik.ui_lists.details.views.ListDetailsGridItemView
 import com.michaldrabik.ui_lists.details.views.ListDetailsItemView
 import com.michaldrabik.ui_lists.details.views.ListDetailsMovieItemView
 import com.michaldrabik.ui_lists.details.views.ListDetailsShowItemView
@@ -27,36 +31,46 @@ class ListDetailsAdapter(
   ReorderListCallbackAdapter {
 
   companion object {
-    private const val VIEW_TYPE_SHOW = 1
-    private const val VIEW_TYPE_MOVIE = 2
+    private const val VIEW_TYPE_SHOW_NORMAL = 1
+    private const val VIEW_TYPE_MOVIE_NORMAL = 2
+    private const val VIEW_TYPE_SHOW_COMPACT = 3
+    private const val VIEW_TYPE_MOVIE_COMPACT = 4
+    private const val VIEW_TYPE_SHOW_GRID = 5
+    private const val VIEW_TYPE_MOVIE_GRID = 6
   }
 
   var items = listOf<ListDetailsItem>()
 
   var listViewMode: ListViewMode = LIST_NORMAL
     set(value) {
+      if (field == value) return
       field = value
-      notifyItemRangeChanged(0, items.size)
+      notifyDataSetChanged()
     }
 
   fun setItems(
     newItems: List<ListDetailsItem>,
     notifyItemsChange: Boolean,
   ) {
-    // Using old DiffUtil method here because of drag and drop issues with asyncDiff.
     val diff = DiffUtil.calculateDiff(ListDetailsDiffCallback(items, newItems))
     diff.dispatchUpdatesTo(this)
     items = newItems
-    if (notifyItemsChange) {
-      itemsChangedListener.invoke()
-    }
+    if (notifyItemsChange) itemsChangedListener.invoke()
   }
 
   override fun getItemViewType(position: Int): Int {
     val item = items[position]
     return when {
-      item.isShow() -> VIEW_TYPE_SHOW
-      item.isMovie() -> VIEW_TYPE_MOVIE
+      item.isShow() -> when (listViewMode) {
+        LIST_NORMAL -> VIEW_TYPE_SHOW_NORMAL
+        LIST_COMPACT -> VIEW_TYPE_SHOW_COMPACT
+        GRID -> VIEW_TYPE_SHOW_GRID
+      }
+      item.isMovie() -> when (listViewMode) {
+        LIST_NORMAL -> VIEW_TYPE_MOVIE_NORMAL
+        LIST_COMPACT -> VIEW_TYPE_MOVIE_COMPACT
+        GRID -> VIEW_TYPE_MOVIE_GRID
+      }
       else -> throw IllegalStateException()
     }
   }
@@ -64,38 +78,19 @@ class ListDetailsAdapter(
   override fun onCreateViewHolder(
     parent: ViewGroup,
     viewType: Int,
-  ) = when (viewType) {
-    VIEW_TYPE_SHOW -> {
-      val view = when (listViewMode) {
-        LIST_NORMAL -> ListDetailsShowItemView(parent.context)
-      }.apply {
-        itemClickListener = { item -> this@ListDetailsAdapter.itemClickListener(item) }
-        missingImageListener = { item, force -> this@ListDetailsAdapter.missingImageListener(item, force) }
-        missingTranslationListener = { item -> this@ListDetailsAdapter.missingTranslationListener(item) }
-      }
-      ListDetailsItemViewHolder(
-        view,
-        itemDragStartListener,
-        itemSwipeStartListener,
-      )
+  ): RecyclerView.ViewHolder {
+    val view = when (viewType) {
+      VIEW_TYPE_SHOW_NORMAL -> ListDetailsShowItemView(parent.context)
+      VIEW_TYPE_MOVIE_NORMAL -> ListDetailsMovieItemView(parent.context)
+      VIEW_TYPE_SHOW_COMPACT, VIEW_TYPE_MOVIE_COMPACT -> ListDetailsCompactItemView(parent.context)
+      VIEW_TYPE_SHOW_GRID, VIEW_TYPE_MOVIE_GRID -> ListDetailsGridItemView(parent.context)
+      else -> throw IllegalStateException()
+    }.apply {
+      itemClickListener = { item -> this@ListDetailsAdapter.itemClickListener(item) }
+      missingImageListener = { item, force -> this@ListDetailsAdapter.missingImageListener(item, force) }
+      missingTranslationListener = { item -> this@ListDetailsAdapter.missingTranslationListener(item) }
     }
-    VIEW_TYPE_MOVIE -> {
-      val view = when (listViewMode) {
-        LIST_NORMAL -> ListDetailsMovieItemView(parent.context)
-      }.apply {
-        itemClickListener = { item -> this@ListDetailsAdapter.itemClickListener(item) }
-        missingImageListener = { item, force -> this@ListDetailsAdapter.missingImageListener(item, force) }
-        missingTranslationListener = { item -> this@ListDetailsAdapter.missingTranslationListener(item) }
-      }
-      ListDetailsItemViewHolder(
-        view,
-        itemDragStartListener,
-        itemSwipeStartListener,
-      )
-    }
-    else -> {
-      throw IllegalStateException()
-    }
+    return ListDetailsItemViewHolder(view, itemDragStartListener, itemSwipeStartListener)
   }
 
   override fun onBindViewHolder(
@@ -104,12 +99,10 @@ class ListDetailsAdapter(
   ) {
     val item = items[position]
     when (holder.itemViewType) {
-      VIEW_TYPE_SHOW -> when (listViewMode) {
-        LIST_NORMAL -> (holder.itemView as ListDetailsShowItemView).bind(item)
-      }
-      VIEW_TYPE_MOVIE -> when (listViewMode) {
-        LIST_NORMAL -> (holder.itemView as ListDetailsMovieItemView).bind(item)
-      }
+      VIEW_TYPE_SHOW_NORMAL -> (holder.itemView as ListDetailsShowItemView).bind(item)
+      VIEW_TYPE_MOVIE_NORMAL -> (holder.itemView as ListDetailsMovieItemView).bind(item)
+      VIEW_TYPE_SHOW_COMPACT, VIEW_TYPE_MOVIE_COMPACT -> (holder.itemView as ListDetailsCompactItemView).bind(item)
+      VIEW_TYPE_SHOW_GRID, VIEW_TYPE_MOVIE_GRID -> (holder.itemView as ListDetailsGridItemView).bind(item)
       else -> throw IllegalStateException()
     }
   }

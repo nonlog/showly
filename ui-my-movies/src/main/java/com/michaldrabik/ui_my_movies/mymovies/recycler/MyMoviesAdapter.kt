@@ -6,7 +6,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.michaldrabik.ui_base.BaseAdapter
 import com.michaldrabik.ui_base.BaseMovieAdapter
 import com.michaldrabik.ui_base.common.ListViewMode
+import com.michaldrabik.ui_base.common.ListViewMode.GRID
+import com.michaldrabik.ui_base.common.ListViewMode.LIST_COMPACT
 import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.views.MovieView
+import com.michaldrabik.ui_base.common.views.media.MovieCompactItemView
+import com.michaldrabik.ui_base.common.views.media.MovieGridItemView
 import com.michaldrabik.ui_model.SortOrder
 import com.michaldrabik.ui_model.SortType
 import com.michaldrabik.ui_my_movies.mymovies.recycler.MyMoviesItem.Type
@@ -29,8 +34,10 @@ class MyMoviesAdapter(
 
   companion object {
     private const val VIEW_TYPE_HEADER = 1
-    private const val VIEW_TYPE_MOVIE_ITEM = 2
+    private const val VIEW_TYPE_MOVIE_NORMAL = 2
     private const val VIEW_TYPE_RECENTS_SECTION = 3
+    private const val VIEW_TYPE_MOVIE_COMPACT = 4
+    private const val VIEW_TYPE_MOVIE_GRID = 5
   }
 
   init {
@@ -41,8 +48,9 @@ class MyMoviesAdapter(
 
   var listViewMode: ListViewMode = LIST_NORMAL
     set(value) {
+      if (field == value) return
       field = value
-      notifyItemRangeChanged(0, asyncDiffer.currentList.size)
+      notifyDataSetChanged()
     }
 
   override fun onCreateViewHolder(
@@ -51,15 +59,14 @@ class MyMoviesAdapter(
   ) = when (viewType) {
     VIEW_TYPE_HEADER -> BaseViewHolder(MyMovieHeaderView(parent.context))
     VIEW_TYPE_RECENTS_SECTION -> BaseViewHolder(MyMoviesRecentsView(parent.context))
-    VIEW_TYPE_MOVIE_ITEM -> BaseAdapter.BaseViewHolder(
-      when (listViewMode) {
-        LIST_NORMAL -> MyMovieAllView(parent.context)
-      }.apply {
-        itemClickListener = this@MyMoviesAdapter.itemClickListener
-        itemLongClickListener = this@MyMoviesAdapter.itemLongClickListener
-        missingImageListener = this@MyMoviesAdapter.missingImageListener
-        missingTranslationListener = this@MyMoviesAdapter.missingTranslationListener
-      },
+    VIEW_TYPE_MOVIE_NORMAL -> BaseAdapter.BaseViewHolder(
+      MyMovieAllView(parent.context).applyMediaListeners(),
+    )
+    VIEW_TYPE_MOVIE_COMPACT -> BaseAdapter.BaseViewHolder(
+      MovieCompactItemView<MyMoviesItem>(parent.context).applyMediaListeners(),
+    )
+    VIEW_TYPE_MOVIE_GRID -> BaseAdapter.BaseViewHolder(
+      MovieGridItemView<MyMoviesItem>(parent.context).applyMediaListeners(),
     )
     else -> throw IllegalStateException()
   }
@@ -82,8 +89,21 @@ class MyMoviesAdapter(
         itemClickListener,
         itemLongClickListener,
       )
-      VIEW_TYPE_MOVIE_ITEM -> when (listViewMode) {
-        LIST_NORMAL -> (holder.itemView as MyMovieAllView).bind(item)
+      VIEW_TYPE_MOVIE_NORMAL -> (holder.itemView as MyMovieAllView).bind(item)
+      VIEW_TYPE_MOVIE_COMPACT -> {
+        (holder.itemView as MovieCompactItemView<MyMoviesItem>).bind(
+          item = item,
+          title = item.displayTitle(),
+          subtitle = item.movie.year.takeIf { it > 0 }?.toString().orEmpty(),
+          translationMissing = item.translation == null,
+        )
+      }
+      VIEW_TYPE_MOVIE_GRID -> {
+        (holder.itemView as MovieGridItemView<MyMoviesItem>).bind(
+          item = item,
+          title = item.displayTitle(),
+          translationMissing = item.translation == null,
+        )
       }
     }
   }
@@ -91,7 +111,21 @@ class MyMoviesAdapter(
   override fun getItemViewType(position: Int) =
     when (asyncDiffer.currentList[position].type) {
       Type.HEADER -> VIEW_TYPE_HEADER
-      Type.ALL_MOVIES_ITEM -> VIEW_TYPE_MOVIE_ITEM
       Type.RECENT_MOVIES -> VIEW_TYPE_RECENTS_SECTION
+      Type.ALL_MOVIES_ITEM -> when (listViewMode) {
+        LIST_NORMAL -> VIEW_TYPE_MOVIE_NORMAL
+        LIST_COMPACT -> VIEW_TYPE_MOVIE_COMPACT
+        GRID -> VIEW_TYPE_MOVIE_GRID
+      }
     }
+
+  private fun <T : MovieView<MyMoviesItem>> T.applyMediaListeners(): T =
+    apply {
+      itemClickListener = this@MyMoviesAdapter.itemClickListener
+      itemLongClickListener = this@MyMoviesAdapter.itemLongClickListener
+      missingImageListener = this@MyMoviesAdapter.missingImageListener
+      missingTranslationListener = this@MyMoviesAdapter.missingTranslationListener
+    }
+
+  private fun MyMoviesItem.displayTitle() = translation?.title?.takeIf { it.isNotBlank() } ?: movie.title
 }

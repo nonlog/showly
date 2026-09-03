@@ -5,7 +5,11 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager.VERTICAL
 import androidx.recyclerview.widget.RecyclerView
+import com.michaldrabik.common.Config.MAIN_GRID_SPAN
+import com.michaldrabik.common.Config.MAIN_GRID_SPAN_TABLET
 import com.michaldrabik.ui_base.common.ListViewMode
+import com.michaldrabik.ui_base.common.ListViewMode.GRID
+import com.michaldrabik.ui_base.common.ListViewMode.LIST_COMPACT
 import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
 import com.michaldrabik.ui_base.utilities.extensions.isTablet
 
@@ -27,7 +31,8 @@ internal object MyMoviesLayoutManagerProvider {
     viewMode: ListViewMode,
   ): RecyclerView.LayoutManager =
     when (viewMode) {
-      LIST_NORMAL -> LinearLayoutManager(context, VERTICAL, false)
+      LIST_NORMAL, LIST_COMPACT -> LinearLayoutManager(context, VERTICAL, false)
+      GRID -> GridLayoutManager(context, MAIN_GRID_SPAN)
     }
 
   private fun provideTabletLayout(
@@ -36,6 +41,7 @@ internal object MyMoviesLayoutManagerProvider {
     gridSpanSize: Int,
   ): RecyclerView.LayoutManager =
     when (viewMode) {
-      LIST_NORMAL -> GridLayoutManager(context, gridSpanSize)
+      LIST_NORMAL, LIST_COMPACT -> GridLayoutManager(context, gridSpanSize)
+      GRID -> GridLayoutManager(context, MAIN_GRID_SPAN_TABLET)
     }
 }

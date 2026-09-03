@@ -6,7 +6,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.michaldrabik.ui_base.BaseAdapter
 import com.michaldrabik.ui_base.BaseMovieAdapter
 import com.michaldrabik.ui_base.common.ListViewMode
+import com.michaldrabik.ui_base.common.ListViewMode.GRID
+import com.michaldrabik.ui_base.common.ListViewMode.LIST_COMPACT
 import com.michaldrabik.ui_base.common.ListViewMode.LIST_NORMAL
+import com.michaldrabik.ui_base.common.views.ShowView
+import com.michaldrabik.ui_base.common.views.media.ShowCompactItemView
+import com.michaldrabik.ui_base.common.views.media.ShowGridItemView
 import com.michaldrabik.ui_model.SortOrder
 import com.michaldrabik.ui_model.SortType
 import com.michaldrabik.ui_my_shows.common.recycler.CollectionListItem.FiltersItem
@@ -31,31 +36,33 @@ class CollectionAdapter(
   ) {
 
   companion object {
-    private const val VIEW_TYPE_SHOW = 1
+    private const val VIEW_TYPE_SHOW_NORMAL = 1
     private const val VIEW_TYPE_FILTERS = 2
+    private const val VIEW_TYPE_SHOW_COMPACT = 3
+    private const val VIEW_TYPE_SHOW_GRID = 4
   }
 
   override val asyncDiffer = AsyncListDiffer(this, CollectionItemDiffCallback())
 
   var listViewMode: ListViewMode = LIST_NORMAL
     set(value) {
+      if (field == value) return
       field = value
-      notifyItemRangeChanged(0, asyncDiffer.currentList.size)
+      notifyDataSetChanged()
     }
 
   override fun onCreateViewHolder(
     parent: ViewGroup,
     viewType: Int,
   ) = when (viewType) {
-    VIEW_TYPE_SHOW -> BaseMovieAdapter.BaseViewHolder(
-      when (listViewMode) {
-        LIST_NORMAL -> CollectionShowView(parent.context)
-      }.apply {
-        itemClickListener = this@CollectionAdapter.itemClickListener
-        itemLongClickListener = this@CollectionAdapter.itemLongClickListener
-        missingImageListener = this@CollectionAdapter.missingImageListener
-        missingTranslationListener = this@CollectionAdapter.missingTranslationListener
-      },
+    VIEW_TYPE_SHOW_NORMAL -> BaseMovieAdapter.BaseViewHolder(
+      CollectionShowView(parent.context).applyMediaListeners(),
+    )
+    VIEW_TYPE_SHOW_COMPACT -> BaseMovieAdapter.BaseViewHolder(
+      ShowCompactItemView<ShowItem>(parent.context).applyMediaListeners(),
+    )
+    VIEW_TYPE_SHOW_GRID -> BaseMovieAdapter.BaseViewHolder(
+      ShowGridItemView<ShowItem>(parent.context).applyMediaListeners(),
     )
     VIEW_TYPE_FILTERS -> BaseMovieAdapter.BaseViewHolder(
       CollectionShowFiltersView(parent.context).apply {
@@ -75,12 +82,23 @@ class CollectionAdapter(
     position: Int,
   ) {
     when (val item = asyncDiffer.currentList[position]) {
-      is FiltersItem -> {
-        (holder.itemView as CollectionShowFiltersView).bind(item, listViewMode)
-      }
-      is ShowItem -> {
-        when (listViewMode) {
-          LIST_NORMAL -> (holder.itemView as CollectionShowView).bind(item)
+      is FiltersItem -> (holder.itemView as CollectionShowFiltersView).bind(item, listViewMode)
+      is ShowItem -> when (holder.itemViewType) {
+        VIEW_TYPE_SHOW_NORMAL -> (holder.itemView as CollectionShowView).bind(item)
+        VIEW_TYPE_SHOW_COMPACT -> {
+          (holder.itemView as ShowCompactItemView<ShowItem>).bind(
+            item = item,
+            title = item.displayTitle(),
+            subtitle = item.displaySubtitle(),
+            translationMissing = item.translation == null,
+          )
+        }
+        VIEW_TYPE_SHOW_GRID -> {
+          (holder.itemView as ShowGridItemView<ShowItem>).bind(
+            item = item,
+            title = item.displayTitle(),
+            translationMissing = item.translation == null,
+          )
         }
       }
     }
@@ -88,8 +106,28 @@ class CollectionAdapter(
 
   override fun getItemViewType(position: Int) =
     when (asyncDiffer.currentList[position]) {
-      is ShowItem -> VIEW_TYPE_SHOW
+      is ShowItem -> when (listViewMode) {
+        LIST_NORMAL -> VIEW_TYPE_SHOW_NORMAL
+        LIST_COMPACT -> VIEW_TYPE_SHOW_COMPACT
+        GRID -> VIEW_TYPE_SHOW_GRID
+      }
       is FiltersItem -> VIEW_TYPE_FILTERS
       else -> throw IllegalStateException()
     }
+
+  private fun <T : ShowView<ShowItem>> T.applyMediaListeners(): T =
+    apply {
+      itemClickListener = { item -> this@CollectionAdapter.itemClickListener(item) }
+      itemLongClickListener = { item -> this@CollectionAdapter.itemLongClickListener(item) }
+      missingImageListener = { item, force -> this@CollectionAdapter.missingImageListener(item, force) }
+      missingTranslationListener = { item -> this@CollectionAdapter.missingTranslationListener(item) }
+    }
+
+  private fun ShowItem.displayTitle() = translation?.title?.takeIf { it.isNotBlank() } ?: show.title
+
+  private fun ShowItem.displaySubtitle(): String =
+    listOfNotNull(
+      show.network.takeIf { it.isNotBlank() },
+      show.year.takeIf { it > 0 }?.toString(),
+    ).joinToString(" · ")
 }
