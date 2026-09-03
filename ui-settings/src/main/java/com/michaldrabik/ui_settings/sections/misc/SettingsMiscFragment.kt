@@ -86,9 +86,15 @@ class SettingsMiscFragment : BaseFragment<SettingsMiscViewModel>(R.layout.fragme
       .setView(dialogBinding.root)
       .setPositiveButton(R.string.textRuntimeCredentialsSave) { _, _ ->
         viewModel.saveRuntimeCredentials(
-          traktClientId = dialogBinding.runtimeCredentialsTraktClientId.text?.toString().orEmpty(),
-          traktClientSecret = dialogBinding.runtimeCredentialsTraktClientSecret.text?.toString().orEmpty(),
-          tmdbReadAccessToken = dialogBinding.runtimeCredentialsTmdbToken.text?.toString().orEmpty(),
+          traktClientId = dialogBinding.runtimeCredentialsTraktClientId.text
+            ?.toString()
+            .orEmpty(),
+          traktClientSecret = dialogBinding.runtimeCredentialsTraktClientSecret.text
+            ?.toString()
+            .orEmpty(),
+          tmdbReadAccessToken = dialogBinding.runtimeCredentialsTmdbToken.text
+            ?.toString()
+            .orEmpty(),
         )
       }.setNeutralButton(R.string.textRuntimeCredentialsRestore) { _, _ ->
         viewModel.restoreRuntimeCredentials()

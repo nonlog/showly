@@ -43,11 +43,18 @@ class RuntimeCredentialsStore @Inject constructor(
   val tmdbReadAccessToken: String
     get() = overrides().tmdbReadAccessToken ?: BuildConfig.TMDB_API_KEY
 
-  fun overrides() = RuntimeCredentialOverrides(
-    traktClientId = preferences.getString(KEY_TRAKT_CLIENT_ID, null)?.takeIf { it.isNotBlank() },
-    traktClientSecret = preferences.getString(KEY_TRAKT_CLIENT_SECRET, null)?.takeIf { it.isNotBlank() },
-    tmdbReadAccessToken = preferences.getString(KEY_TMDB_READ_ACCESS_TOKEN, null)?.takeIf { it.isNotBlank() },
-  )
+  fun overrides() =
+    RuntimeCredentialOverrides(
+      traktClientId = preferences
+        .getString(KEY_TRAKT_CLIENT_ID, null)
+        ?.takeIf { it.isNotBlank() },
+      traktClientSecret = preferences
+        .getString(KEY_TRAKT_CLIENT_SECRET, null)
+        ?.takeIf { it.isNotBlank() },
+      tmdbReadAccessToken = preferences
+        .getString(KEY_TMDB_READ_ACCESS_TOKEN, null)
+        ?.takeIf { it.isNotBlank() },
+    )
 
   fun saveOverrides(
     traktClientId: String?,
@@ -62,7 +69,9 @@ class RuntimeCredentialsStore @Inject constructor(
       "Trakt client id and secret must both be set or both be empty."
     }
 
-    preferences.edit().apply {
+    preferences
+      .edit()
+      .apply {
       if (clientId.isBlank()) {
         remove(KEY_TRAKT_CLIENT_ID)
         remove(KEY_TRAKT_CLIENT_SECRET)
@@ -75,11 +84,14 @@ class RuntimeCredentialsStore @Inject constructor(
       } else {
         putString(KEY_TMDB_READ_ACCESS_TOKEN, tmdbToken)
       }
-    }.apply()
+      }.apply()
   }
 
   fun restoreRepositoryDefaults() {
-    preferences.edit().clear().apply()
+    preferences
+      .edit()
+      .clear()
+      .apply()
   }
 
   fun traktAuthorizeUrl(): String =

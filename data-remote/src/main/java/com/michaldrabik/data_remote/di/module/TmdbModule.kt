@@ -25,6 +25,5 @@ object TmdbModule {
 
   @Provides
   @Singleton
-  fun providesTmdbInterceptor(runtimeCredentials: RuntimeCredentialsStore) =
-    TmdbInterceptor(runtimeCredentials)
+  fun providesTmdbInterceptor(runtimeCredentials: RuntimeCredentialsStore) = TmdbInterceptor(runtimeCredentials)
 }
