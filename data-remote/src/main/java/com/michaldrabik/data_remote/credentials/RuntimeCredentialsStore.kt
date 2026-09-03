@@ -84,8 +84,7 @@ class RuntimeCredentialsStore @Inject constructor(
         } else {
           putString(KEY_TMDB_READ_ACCESS_TOKEN, tmdbToken)
         }
-      }
-      .apply()
+      }.apply()
   }
 
   fun restoreRepositoryDefaults() {
@@ -96,7 +95,8 @@ class RuntimeCredentialsStore @Inject constructor(
   }
 
   fun traktAuthorizeUrl(): String =
-    Uri.Builder()
+    Uri
+      .Builder()
       .scheme("https")
       .authority("trakt.tv")
       .appendPath("oauth")
