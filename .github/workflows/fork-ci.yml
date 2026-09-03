@@ -24,7 +24,23 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run ktlint
-        run: curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint && chmod a+x ktlint && ./ktlint
+        shell: bash
+        run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
+          chmod a+x ktlint
+          set +e
+          ./ktlint 2>&1 | tee ktlint.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            {
+              echo "### ktlint failure"
+              echo '~~~~text'
+              tail -n 240 ktlint.log
+              echo '~~~~'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
   test-build:
     runs-on: ubuntu-latest
@@ -76,17 +92,21 @@ jobs:
           : > app/keystore
 
       - name: Run unit tests
-        run: >-
-          ./gradlew --no-daemon --stacktrace
-          :app:testDebugUnitTest
-          :data-remote:testDebugUnitTest
-          :repository:testDebugUnitTest
-          :ui-discover:testDebugUnitTest
-          :ui-trakt-sync:testDebugUnitTest
-          :ui-statistics:testDebugUnitTest
-          :ui-statistics-movies:testDebugUnitTest
-          :ui-search:testDebugUnitTest
-          :ui-progress-movies:testDebugUnitTest
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon --stacktrace             :app:testDebugUnitTest             :data-remote:testDebugUnitTest             :repository:testDebugUnitTest             :ui-discover:testDebugUnitTest             :ui-trakt-sync:testDebugUnitTest             :ui-statistics:testDebugUnitTest             :ui-statistics-movies:testDebugUnitTest             :ui-search:testDebugUnitTest             :ui-progress-movies:testDebugUnitTest 2>&1 | tee unit-tests.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            {
+              echo "### Unit test failure"
+              echo '~~~~text'
+              tail -n 300 unit-tests.log
+              echo '~~~~'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
       - name: Build debug APK
         run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
