@@ -58,6 +58,7 @@ class SettingsRepository @Inject constructor(
     private const val PROGRESS_NEXT_EPISODE_TYPE = "PROGRESS_NEXT_EPISODE_TYPE"
     private const val PROGRESS_DATE_SELECTION_TYPE = "PROGRESS_DATE_SELECTION_TYPE"
     private const val LOCALE_INITIALISED = "LOCALE_INITIALISED"
+    private const val APP_THEME = "APP_THEME"
   }
 
   suspend fun isInitialized() =
@@ -88,6 +89,7 @@ class SettingsRepository @Inject constructor(
   var language by StringPreference(preferences, LANGUAGE, DEFAULT_LANGUAGE)
   var country by StringPreference(preferences, COUNTRY, DEFAULT_COUNTRY)
   var dateFormat by StringPreference(preferences, DATE_FORMAT, DEFAULT_DATE_FORMAT)
+  var appTheme by StringPreference(preferences, APP_THEME, "DARK")
 
   var progressUpcomingDays by LongPreference(preferences, PROGRESS_UPCOMING_DAYS, 30)
   var isProgressUpcomingCollapsed by BooleanPreference(preferences, PROGRESS_UPCOMING_COLLAPSED)

@@ -1,7 +1,7 @@
 <resources>
 
   <!-- Base app theme -->
-  <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+  <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
     <item name="android:windowBackground">@color/colorBackground</item>
     <item name="switchStyle">@style/ShowlySwitch</item>
     <item name="enableEdgeToEdge">true</item>
@@ -10,17 +10,17 @@
     <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
     <item name="colorAccent">@color/colorAccent</item>
 
-    <item name="android:textColorPrimary">@color/colorWhite</item>
-    <item name="android:textColorSecondary">@color/colorGrayLight</item>
-    <item name="textColorOnSurface">@color/colorWhite</item>
+    <item name="android:textColorPrimary">@color/colorTextPrimary</item>
+    <item name="android:textColorSecondary">@color/colorTextSecondary</item>
+    <item name="textColorOnSurface">@color/colorTextPrimary</item>
     <item name="textColorGridTitle">@color/colorWhite</item>
-    <item name="textColorTab">#A1A1A1</item>
-    <item name="textColorTabSelected">@color/colorWhite</item>
+    <item name="textColorTab">@color/colorTabText</item>
+    <item name="textColorTabSelected">@color/colorTextPrimary</item>
     <item name="textColorChip">?android:textColorPrimary</item>
     <item name="textColorChipSelected">@color/colorAccent</item>
     <item name="colorBackgroundChipSelected">@color/colorBackground</item>
     <item name="colorBackgroundChipSelectedLight">?colorSearchViewBackground</item>
-    <item name="colorProgressTrack">#3C3C3C</item>
+    <item name="colorProgressTrack">@color/colorProgressTrackTheme</item>
 
     <item name="colorInfoSnackbar">@color/colorWhite</item>
     <item name="textColorInfoSnackbar">@color/colorBlack</item>
@@ -28,24 +28,24 @@
     <item name="textColorErrorSnackbar">@color/colorWhite</item>
 
     <item name="colorBottomMenuBackground">@color/colorPrimary</item>
-    <item name="colorBottomMenuItem">#838383</item>
-    <item name="colorBottomMenuItemChecked">@color/colorWhite</item>
-    <item name="colorBottomMenuSeparator">#464646</item>
-    <item name="colorBottomMenuIndicator">#E6323339</item>
+    <item name="colorBottomMenuItem">@color/colorBottomMenuItemTheme</item>
+    <item name="colorBottomMenuItemChecked">@color/colorTextPrimary</item>
+    <item name="colorBottomMenuSeparator">@color/colorBottomMenuSeparatorTheme</item>
+    <item name="colorBottomMenuIndicator">@color/colorBottomMenuIndicatorTheme</item>
 
     <item name="colorSearchViewBackground">@color/colorPrimary</item>
-    <item name="colorSearchViewControl">@color/colorGrayLight</item>
+    <item name="colorSearchViewControl">@color/colorTextSecondary</item>
 
     <item name="colorSearchLocalViewBackground">@color/colorGrayDark</item>
-    <item name="colorSearchLocalViewControl">@color/colorGrayLight</item>
+    <item name="colorSearchLocalViewControl">@color/colorTextSecondary</item>
 
-    <item name="colorPlaceholderBackground">#222222</item>
-    <item name="colorPlaceholderStroke">#6A6A6A</item>
-    <item name="colorPlaceholderIcon">#6A6A6A</item>
+    <item name="colorPlaceholderBackground">@color/colorPlaceholderBackgroundTheme</item>
+    <item name="colorPlaceholderStroke">@color/colorPlaceholderStrokeTheme</item>
+    <item name="colorPlaceholderIcon">@color/colorPlaceholderIconTheme</item>
 
     <item name="colorSeparator">@color/colorGrayDark</item>
-    <item name="colorChipButtonStroke">#66AAAAAA</item>
-    <item name="colorCardBackground">#282828</item>
+    <item name="colorChipButtonStroke">@color/colorChipButtonStrokeTheme</item>
+    <item name="colorCardBackground">@color/colorCardBackgroundTheme</item>
     <item name="colorBadgeBackground">@color/colorGrayDark</item>
     <item name="colorSheetBackground">@color/colorPrimary</item>
     <item name="colorWidgetStatusBackground">@color/colorBlackTranslucent</item>
@@ -111,14 +111,14 @@
 
   <!-- Dialogs -->
 
-  <style name="AlertDialog" parent="@style/Theme.Material3.Dark.Dialog">
+  <style name="AlertDialog" parent="@style/Theme.Material3.DayNight.Dialog">
     <item name="colorAccent">@color/colorAccent</item>
     <item name="colorPrimary">@color/colorAccent</item>
     <item name="buttonBarNegativeButtonStyle">@style/AlertDialog.NegativeButton</item>
   </style>
 
   <style name="AlertDialog.NegativeButton" parent="Widget.Material3.Button.TextButton.Dialog">
-    <item name="android:textColor">@color/colorGrayLight</item>
+    <item name="android:textColor">@color/colorTextSecondary</item>
     <item name="cornerRadius">100dp</item>
   </style>
 
@@ -362,7 +362,7 @@
   <style name="ShowlyDatePicker" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
     <item name="colorOnPrimary">@color/colorWhite</item>
     <item name="colorSurface">@color/colorBackground</item>
-    <item name="colorOnSurface">@color/colorWhite</item>
+    <item name="colorOnSurface">@color/colorTextPrimary</item>
     <item name="buttonBarPositiveButtonStyle">@style/ShowlyDatePicker.Button</item>
     <item name="buttonBarNegativeButtonStyle">@style/ShowlyDatePicker.Button</item>
   </style>
@@ -373,7 +373,7 @@
 
   <style name="ShowlyTimePicker" parent="ThemeOverlay.MaterialComponents.TimePicker">
     <item name="colorSurface">@color/colorBackground</item>
-    <item name="colorOnSurface">@color/colorGrayLight</item>
+    <item name="colorOnSurface">@color/colorTextSecondary</item>
     <item name="colorPrimary">?attr/colorBottomMenuBackground</item>
     <item name="colorOnPrimary">?android:textColorPrimary</item>
     <item name="materialClockStyle">@style/ShowlyTimePicker.Clock</item>

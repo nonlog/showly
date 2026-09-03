@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.os.Build
 import android.os.StrictMode
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.jakewharton.processphoenix.ProcessPhoenix
@@ -12,6 +13,7 @@ import com.michaldrabik.ui_base.common.AppScopeProvider
 import com.michaldrabik.ui_base.common.WidgetsProvider
 import com.michaldrabik.ui_base.utilities.extensions.notificationManager
 import com.michaldrabik.ui_model.Settings
+import com.michaldrabik.ui_settings.helpers.AppTheme
 import com.michaldrabik.ui_widgets.calendar.CalendarWidgetProvider
 import com.michaldrabik.ui_widgets.calendar_movies.CalendarMoviesWidgetProvider
 import com.michaldrabik.ui_widgets.progress.ProgressWidgetProvider
@@ -104,6 +106,7 @@ class App :
     }
 
     setupSettings()
+    AppCompatDelegate.setDefaultNightMode(AppTheme.fromName(settingsRepository.appTheme).code)
     setupStrictMode()
     setupNotificationChannels()
   }

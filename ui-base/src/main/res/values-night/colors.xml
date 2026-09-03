@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="colorBackground">#131313</color>
+
+  <color name="colorPrimary">#222327</color>
+  <color name="colorPrimaryDark">#121212</color>
+  <color name="colorAccent">#F44336</color>
+  <color name="colorError">#F44336</color>
+
+  <color name="colorTransparent">#00000000</color>
+  <color name="colorBlack">#000000</color>
+  <color name="colorBlackTranslucent">#B2000000</color>
+  <color name="colorBlackTranslucentMedium">#66000000</color>
+  <color name="colorBlackTranslucentLight">#40000000</color>
+  <color name="colorWhite">#FFFFFF</color>
+  <color name="colorGrayLight">#AAAAAA</color>
+  <color name="colorGray">#636363</color>
+  <color name="colorGrayDark">#303030</color>
+
+  <color name="colorBlue">#17283A</color>
+  <color name="colorBlueLight">#70767C</color>
+  <color name="colorBlueLight2x">#91989F</color>
+
+  <color name="colorNotificationDark">#F44336</color>
+  <color name="colorNotificationLight">#4B6383</color>
+
+  <color name="colorTwitterBlue">#1DA1F2</color>
+
+  <color name="colorTextPrimary">#FFFFFF</color>
+  <color name="colorTextSecondary">#AAAAAA</color>
+  <color name="colorTabText">#A1A1A1</color>
+  <color name="colorProgressTrackTheme">#3C3C3C</color>
+  <color name="colorBottomMenuItemTheme">#838383</color>
+  <color name="colorBottomMenuSeparatorTheme">#464646</color>
+  <color name="colorBottomMenuIndicatorTheme">#E6323339</color>
+  <color name="colorPlaceholderBackgroundTheme">#222222</color>
+  <color name="colorPlaceholderStrokeTheme">#6A6A6A</color>
+  <color name="colorPlaceholderIconTheme">#6A6A6A</color>
+  <color name="colorChipButtonStrokeTheme">#66AAAAAA</color>
+  <color name="colorCardBackgroundTheme">#282828</color>
+  <color name="colorSystemBarScrimLight">#D9FFFFFF</color>
+  <color name="colorSystemBarScrimDark">#66000000</color>
+</resources>

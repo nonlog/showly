@@ -16,6 +16,7 @@ import com.michaldrabik.ui_model.ProgressDateSelectionType
 import com.michaldrabik.ui_model.ProgressNextEpisodeType
 import com.michaldrabik.ui_model.Settings
 import com.michaldrabik.ui_settings.helpers.AppLanguage
+import com.michaldrabik.ui_settings.helpers.AppTheme
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -97,6 +98,11 @@ class SettingsGeneralMainCase @Inject constructor(
   }
 
   fun getCountry() = AppCountry.fromCode(settingsRepository.country)
+  fun getTheme() = AppTheme.fromName(settingsRepository.appTheme)
+
+  fun setTheme(theme: AppTheme) {
+    settingsRepository.appTheme = theme.name
+  }
 
   fun setCountry(country: AppCountry) {
     settingsRepository.country = country.code
