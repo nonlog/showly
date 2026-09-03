@@ -108,6 +108,15 @@ jobs:
           fi
           exit "$status"
 
+      - name: Upload unit test failure log
+        if: failure() && hashFiles('unit-tests.log') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: showly-unit-test-failure-${{ github.sha }}
+          path: unit-tests.log
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Build debug APK
         run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
 
