@@ -72,19 +72,20 @@ class RuntimeCredentialsStore @Inject constructor(
     preferences
       .edit()
       .apply {
-      if (clientId.isBlank()) {
-        remove(KEY_TRAKT_CLIENT_ID)
-        remove(KEY_TRAKT_CLIENT_SECRET)
-      } else {
-        putString(KEY_TRAKT_CLIENT_ID, clientId)
-        putString(KEY_TRAKT_CLIENT_SECRET, clientSecret)
+        if (clientId.isBlank()) {
+          remove(KEY_TRAKT_CLIENT_ID)
+          remove(KEY_TRAKT_CLIENT_SECRET)
+        } else {
+          putString(KEY_TRAKT_CLIENT_ID, clientId)
+          putString(KEY_TRAKT_CLIENT_SECRET, clientSecret)
+        }
+        if (tmdbToken.isBlank()) {
+          remove(KEY_TMDB_READ_ACCESS_TOKEN)
+        } else {
+          putString(KEY_TMDB_READ_ACCESS_TOKEN, tmdbToken)
+        }
       }
-      if (tmdbToken.isBlank()) {
-        remove(KEY_TMDB_READ_ACCESS_TOKEN)
-      } else {
-        putString(KEY_TMDB_READ_ACCESS_TOKEN, tmdbToken)
-      }
-      }.apply()
+      .apply()
   }
 
   fun restoreRepositoryDefaults() {
