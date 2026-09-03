@@ -3,6 +3,7 @@ package com.michaldrabik.data_remote.token
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import com.michaldrabik.data_remote.Config
+import com.michaldrabik.data_remote.credentials.RuntimeCredentialsStore
 import com.michaldrabik.data_remote.trakt.model.OAuthResponse
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -29,6 +30,7 @@ internal class TraktTokenProvider(
   private val sharedPreferences: SharedPreferences,
   private val moshi: Moshi,
   @Named("okHttpBase") private val okHttpClient: OkHttpClient,
+  private val runtimeCredentials: RuntimeCredentialsStore,
 ) : TokenProvider {
 
   companion object {
@@ -112,8 +114,8 @@ internal class TraktTokenProvider(
 
     val body = JSONObject()
       .put("refresh_token", refreshToken)
-      .put("client_id", Config.TRAKT_CLIENT_ID)
-      .put("client_secret", Config.TRAKT_CLIENT_SECRET)
+      .put("client_id", runtimeCredentials.traktClientId)
+      .put("client_secret", runtimeCredentials.traktClientSecret)
       .put("redirect_uri", Config.TRAKT_REDIRECT_URL)
       .put("grant_type", "refresh_token")
       .toString()

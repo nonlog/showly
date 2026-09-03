@@ -158,4 +158,19 @@
   <string name="textTransparency50" translatable="false">50%</string>
   <string name="textTransparency75" translatable="false">75%</string>
   <string name="textTransparency100">Opaque</string>
+  <string name="textRuntimeCredentialsTitle">API credentials</string>
+  <string name="textRuntimeCredentialsSummaryRepository">Repository defaults</string>
+  <string name="textRuntimeCredentialsSummaryCustom">Custom overrides active</string>
+  <string name="textRuntimeCredentialsDescription">Override credentials on this device. Leave fields empty to use the values embedded by the repository build.</string>
+  <string name="textRuntimeCredentialsTraktClientId">Trakt Client ID</string>
+  <string name="textRuntimeCredentialsTraktClientSecret">Trakt Client Secret</string>
+  <string name="textRuntimeCredentialsTmdbToken">TMDB Read Access Token</string>
+  <string name="textRuntimeCredentialsEmptyUsesRepository">Empty = repository default</string>
+  <string name="textRuntimeCredentialsSave">Save overrides</string>
+  <string name="textRuntimeCredentialsRestore">Restore repository defaults</string>
+  <string name="textRuntimeCredentialsTraktPairRequired">Trakt Client ID and Client Secret must be set together.</string>
+  <string name="textRuntimeCredentialsSaved">API credential overrides saved.</string>
+  <string name="textRuntimeCredentialsSavedReauth">API credential overrides saved. Sign in to Trakt again.</string>
+  <string name="textRuntimeCredentialsRestored">Repository API credential defaults restored.</string>
+  <string name="textRuntimeCredentialsRestoredReauth">Repository API credential defaults restored. Sign in to Trakt again.</string>
 </resources>

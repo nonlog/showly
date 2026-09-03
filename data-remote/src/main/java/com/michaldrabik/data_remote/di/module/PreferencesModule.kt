@@ -16,6 +16,17 @@ object PreferencesModule {
 
   @Provides
   @Singleton
+  @Named("runtimeCredentialsPreferences")
+  fun providesRuntimeCredentialsPreferences(
+    @ApplicationContext context: Context,
+  ): SharedPreferences =
+    context.applicationContext.getSharedPreferences(
+      "PREFERENCES_RUNTIME_CREDENTIALS",
+      Context.MODE_PRIVATE,
+    )
+
+  @Provides
+  @Singleton
   @Named("networkPreferences")
   fun providesNetworkPreferences(
     @ApplicationContext context: Context,

@@ -1,5 +1,6 @@
 package com.michaldrabik.data_remote.di.module
 
+import com.michaldrabik.data_remote.credentials.RuntimeCredentialsStore
 import com.michaldrabik.data_remote.tmdb.TmdbInterceptor
 import com.michaldrabik.data_remote.tmdb.TmdbRemoteDataSource
 import com.michaldrabik.data_remote.tmdb.api.TmdbApi
@@ -24,5 +25,6 @@ object TmdbModule {
 
   @Provides
   @Singleton
-  fun providesTmdbInterceptor() = TmdbInterceptor()
+  fun providesTmdbInterceptor(runtimeCredentials: RuntimeCredentialsStore) =
+    TmdbInterceptor(runtimeCredentials)
 }

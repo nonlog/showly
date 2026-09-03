@@ -1,9 +1,8 @@
 package com.michaldrabik.data_remote.trakt.api
 
 import com.michaldrabik.data_remote.Config
-import com.michaldrabik.data_remote.Config.TRAKT_CLIENT_ID
-import com.michaldrabik.data_remote.Config.TRAKT_CLIENT_SECRET
 import com.michaldrabik.data_remote.Config.TRAKT_REDIRECT_URL
+import com.michaldrabik.data_remote.credentials.RuntimeCredentialsStore
 import com.michaldrabik.data_remote.tmdb.model.TmdbPerson
 import com.michaldrabik.data_remote.trakt.TraktRemoteDataSource
 import com.michaldrabik.data_remote.trakt.api.service.TraktAuthService
@@ -32,6 +31,7 @@ internal class TraktApi(
   private val commentsService: TraktCommentsService,
   private val searchService: TraktSearchService,
   private val peopleService: TraktPeopleService,
+  private val runtimeCredentials: RuntimeCredentialsStore,
 ) : TraktRemoteDataSource {
 
   override suspend fun fetchShow(traktId: Long) = showsService.fetchShow(traktId)
@@ -190,8 +190,8 @@ internal class TraktApi(
   override suspend fun fetchAuthTokens(code: String): OAuthResponse {
     val request = OAuthRequest(
       code,
-      TRAKT_CLIENT_ID,
-      TRAKT_CLIENT_SECRET,
+      runtimeCredentials.traktClientId,
+      runtimeCredentials.traktClientSecret,
       TRAKT_REDIRECT_URL,
     )
     return authService.fetchOAuthToken(request)
@@ -200,8 +200,8 @@ internal class TraktApi(
   override suspend fun refreshAuthTokens(refreshToken: String): OAuthResponse {
     val request = OAuthRefreshRequest(
       refreshToken,
-      TRAKT_CLIENT_ID,
-      TRAKT_CLIENT_SECRET,
+      runtimeCredentials.traktClientId,
+      runtimeCredentials.traktClientSecret,
       TRAKT_REDIRECT_URL,
     )
     return authService.refreshOAuthToken(request)
@@ -210,8 +210,8 @@ internal class TraktApi(
   override suspend fun revokeAuthTokens(token: String) {
     val request = OAuthRevokeRequest(
       token,
-      TRAKT_CLIENT_ID,
-      TRAKT_CLIENT_SECRET,
+      runtimeCredentials.traktClientId,
+      runtimeCredentials.traktClientSecret,
     )
     authService.revokeOAuthToken(request)
   }

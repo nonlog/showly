@@ -1,6 +1,7 @@
 package com.michaldrabik.data_remote.di.module
 
 import android.content.SharedPreferences
+import com.michaldrabik.data_remote.credentials.RuntimeCredentialsStore
 import com.michaldrabik.data_remote.token.TokenProvider
 import com.michaldrabik.data_remote.token.TraktTokenProvider
 import com.michaldrabik.data_remote.trakt.AuthorizedTraktRemoteDataSource
@@ -33,6 +34,7 @@ object TraktModule {
   @Singleton
   fun providesTraktApi(
     @Named("retrofitTrakt") retrofit: Retrofit,
+    runtimeCredentials: RuntimeCredentialsStore,
   ): TraktRemoteDataSource =
     TraktApi(
       showsService = retrofit.create(TraktShowsService::class.java),
@@ -41,6 +43,7 @@ object TraktModule {
       commentsService = retrofit.create(TraktCommentsService::class.java),
       searchService = retrofit.create(TraktSearchService::class.java),
       peopleService = retrofit.create(TraktPeopleService::class.java),
+      runtimeCredentials = runtimeCredentials,
     )
 
   @Provides
@@ -60,10 +63,12 @@ object TraktModule {
     @Named("networkPreferences") sharedPreferences: SharedPreferences,
     @Named("okHttpBase") okHttpClient: OkHttpClient,
     moshi: Moshi,
+    runtimeCredentials: RuntimeCredentialsStore,
   ): TokenProvider =
     TraktTokenProvider(
       sharedPreferences = sharedPreferences,
       moshi = moshi,
       okHttpClient = okHttpClient,
+      runtimeCredentials = runtimeCredentials,
     )
 }

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.net.toUri
 import androidx.fragment.app.viewModels
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.michaldrabik.common.Config
 import com.michaldrabik.ui_base.BaseFragment
 import com.michaldrabik.ui_base.utilities.events.MessageEvent
@@ -16,6 +17,7 @@ import com.michaldrabik.ui_base.utilities.viewBinding
 import com.michaldrabik.ui_settings.BuildConfig
 import com.michaldrabik.ui_settings.R
 import com.michaldrabik.ui_settings.databinding.FragmentSettingsMiscBinding
+import com.michaldrabik.ui_settings.databinding.ViewRuntimeCredentialsBinding
 import com.michaldrabik.ui_settings.helpers.PlayStoreHelper
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -43,6 +45,7 @@ class SettingsMiscFragment : BaseFragment<SettingsMiscViewModel>(R.layout.fragme
       settingsContactDevs.onClick { openMailMessage() }
       settingsRateApp.onClick { PlayStoreHelper.openPlayStorePage(requireActivity()) }
       settingsDeleteCache.onClick { viewModel.deleteImagesCache(requireAppContext()) }
+      settingsRuntimeCredentials.onClick { showRuntimeCredentialsDialog() }
 
       settingsTwitterIcon.onClick { openWebLink(Config.TWITTER_URL) }
       settingsTraktIcon.onClick { openWebLink(Config.TRAKT_URL) }
@@ -58,8 +61,39 @@ class SettingsMiscFragment : BaseFragment<SettingsMiscViewModel>(R.layout.fragme
       with(binding) {
         userId.let { settingsUserId.text = it }
         settingsVersion.text = "v${BuildConfig.VER_NAME} (${BuildConfig.VER_CODE})"
+        settingsRuntimeCredentialsSummary.setText(
+          if (hasRuntimeCredentialOverrides) {
+            R.string.textRuntimeCredentialsSummaryCustom
+          } else {
+            R.string.textRuntimeCredentialsSummaryRepository
+          },
+        )
       }
     }
+  }
+
+  private fun showRuntimeCredentialsDialog() {
+    val overrides = viewModel.getRuntimeCredentialOverrides()
+    val dialogBinding = ViewRuntimeCredentialsBinding.inflate(layoutInflater).apply {
+      runtimeCredentialsTraktClientId.setText(overrides.traktClientId.orEmpty())
+      runtimeCredentialsTraktClientSecret.setText(overrides.traktClientSecret.orEmpty())
+      runtimeCredentialsTmdbToken.setText(overrides.tmdbReadAccessToken.orEmpty())
+    }
+
+    MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialog)
+      .setTitle(R.string.textRuntimeCredentialsTitle)
+      .setMessage(R.string.textRuntimeCredentialsDescription)
+      .setView(dialogBinding.root)
+      .setPositiveButton(R.string.textRuntimeCredentialsSave) { _, _ ->
+        viewModel.saveRuntimeCredentials(
+          traktClientId = dialogBinding.runtimeCredentialsTraktClientId.text?.toString().orEmpty(),
+          traktClientSecret = dialogBinding.runtimeCredentialsTraktClientSecret.text?.toString().orEmpty(),
+          tmdbReadAccessToken = dialogBinding.runtimeCredentialsTmdbToken.text?.toString().orEmpty(),
+        )
+      }.setNeutralButton(R.string.textRuntimeCredentialsRestore) { _, _ ->
+        viewModel.restoreRuntimeCredentials()
+      }.setNegativeButton(R.string.textCancel) { _, _ -> }
+      .show()
   }
 
   private fun openWebLink(url: String) {

@@ -17,6 +17,25 @@
     />
 
   <LinearLayout
+    android:id="@+id/settingsRuntimeCredentials"
+    style="@style/Settings.ItemLayout"
+    android:layout_width="match_parent"
+    >
+
+    <TextView
+      style="@style/Settings.Title"
+      android:text="@string/textRuntimeCredentialsTitle"
+      />
+
+    <TextView
+      android:id="@+id/settingsRuntimeCredentialsSummary"
+      style="@style/Settings.Summary"
+      tools:text="Repository defaults"
+      />
+
+  </LinearLayout>
+
+  <LinearLayout
     android:id="@+id/settingsRateApp"
     style="@style/Settings.ItemLayout"
     android:layout_width="match_parent"
