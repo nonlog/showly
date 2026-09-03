@@ -33,6 +33,7 @@ import com.michaldrabik.ui_base.events.TraktSyncError
 import com.michaldrabik.ui_base.events.TraktSyncProgress
 import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
+import com.michaldrabik.ui_base.floppy.FloppyHistorySyncRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportListsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportRatingsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportWatchedRunner
@@ -46,6 +47,7 @@ import com.michaldrabik.ui_base.trakt.receivers.ListLimitNotificationReceiver.Ke
 import com.michaldrabik.ui_base.trakt.receivers.WatchlistLimitNotificationReceiver
 import com.michaldrabik.ui_base.trakt.receivers.WatchlistLimitNotificationReceiver.Key.WATCHLIST_NOTIFICATION_SNOOZED_AT
 import com.michaldrabik.ui_base.utilities.extensions.notificationManager
+import com.michaldrabik.ui_base.utilities.extensions.rethrowCancellation
 import com.michaldrabik.ui_model.TraktSyncSchedule
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -67,6 +69,7 @@ class TraktSyncWorker @AssistedInject constructor(
   private val exportListsRunner: TraktExportListsRunner,
   private val exportRatingsRunner: TraktExportRatingsRunner,
   private val eventsManager: EventsManager,
+  private val floppyHistorySyncRunner: FloppyHistorySyncRunner,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
@@ -186,6 +189,9 @@ class TraktSyncWorker @AssistedInject constructor(
         runExportLists()
         runExportRatings()
       }
+      if (isImport || isExport) {
+        runFloppyHistorySync()
+      }
 
       miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
 
@@ -280,6 +286,19 @@ class TraktSyncWorker @AssistedInject constructor(
       exportRatingsRunner.run()
     } catch (error: Throwable) {
       handleListsError(error)
+    }
+  }
+
+  private suspend fun runFloppyHistorySync() {
+    val status = "Syncing Floppy history..."
+    setProgressNotification(status)
+    eventsManager.sendEvent(TraktSyncProgress(status))
+    try {
+      floppyHistorySyncRunner.run()
+    } catch (error: Throwable) {
+      rethrowCancellation(error)
+      Timber.w(error, "Floppy history sync failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyHistorySync()")
     }
   }
 

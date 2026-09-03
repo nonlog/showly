@@ -55,3 +55,15 @@ Floppy
 ```
 
 This lets the fork preserve mature Trakt synchronization while adding a self-hosted copy. A later stage may add Floppy-originated changes flowing back to Trakt, but only after conflict and deletion semantics are defined.
+
+## S2 history synchronization
+
+S2 mirrors the actual Trakt history event stream rather than reconstructing history from Showly's local watched flags. This preserves every rewatch event and its original watched_at timestamp.
+
+Movie and episode history maintain separate Trakt history-id checkpoints. The checkpoint advances only after an event is successfully written, already present, or cannot be mapped because required external identity is missing. A Floppy/network failure leaves the current event uncheckpointed so the next Trakt sync retries it.
+
+Before writing, Showly reads the stable Floppy media detail response and compares existing consumptions[].end_date with the Trakt watched_at instant. Equivalent instants with different timezone offsets are treated as the same watch. This makes retries idempotent even if the app stops after the Floppy write but before persisting the checkpoint.
+
+Changing the configured Floppy base URL or API key clears the history checkpoints. A new instance/account therefore bootstraps from Trakt history again, while consumption-time deduplication protects an existing account after token rotation.
+
+Floppy synchronization is deliberately non-fatal to Trakt synchronization. Deletion/tombstone propagation is deferred to the bidirectional-sync milestone.

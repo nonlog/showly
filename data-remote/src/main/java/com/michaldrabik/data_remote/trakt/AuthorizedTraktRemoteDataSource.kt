@@ -51,6 +51,11 @@ interface AuthorizedTraktRemoteDataSource {
 
   suspend fun fetchSyncShowHistory(showId: Long): List<SyncHistoryItem>
 
+  suspend fun fetchSyncHistory(
+    type: String,
+    afterId: Long = 0L,
+  ): List<SyncHistoryItem>
+
   suspend fun fetchSyncWatchedShows(extended: String? = null): List<SyncItem>
 
   suspend fun fetchSyncWatchedMovies(extended: String? = null): List<SyncItem>

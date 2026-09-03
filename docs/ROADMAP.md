@@ -30,15 +30,19 @@
 - [x] Add authenticated connection check through /api/v1/user/preferences/ using X-API-Key.
 - [x] Add settings UI and clear connection states.
 - [x] Add focused data-remote tests to fork CI.
-- [ ] Verify the GitHub Actions build and test the settings screen against a real user API token.
+- [x] Verify the GitHub Actions build.
+- [ ] Test the settings screen against a real user API token.
 
 ## S2 - Trakt to Floppy watched/history vertical slice
 
-- Introduce the minimum tracking adapter boundary required by real call sites.
-- After Trakt sync refreshes local state, export movie history to Floppy.
-- Export episode watched/history to Floppy.
-- Use TMDB/external IDs at the Floppy boundary, never Floppy internal row IDs.
-- Add idempotency/deduplication tests before background retry.
+- [x] Introduce an isolated Floppy history runner after normal Trakt sync.
+- [x] Read actual Trakt movie and episode history events so rewatch timestamps are preserved.
+- [x] Export movie history to Floppy using TMDB identity.
+- [x] Export episode history using parent-show TMDB identity plus season/episode coordinates.
+- [x] Add separate movie/episode Trakt history checkpoints for incremental sync.
+- [x] Deduplicate retries against Floppy consumptions by exact watched instant.
+- [x] Keep Floppy failures non-fatal to the existing local/Trakt sync.
+- [ ] Verify the S2 GitHub Actions build and perform an on-device bootstrap test.
 
 ## S3 - Watchlist, ratings, and lists
 

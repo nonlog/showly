@@ -28,6 +28,13 @@ interface TraktSyncService {
     @Query("limit") limit: Int? = null,
   ): Response<List<SyncHistoryItem>>
 
+  @GET("sync/history/{type}")
+  suspend fun fetchSyncHistory(
+    @Path("type") type: String,
+    @Query("page") page: Int? = null,
+    @Query("limit") limit: Int? = null,
+  ): Response<List<SyncHistoryItem>>
+
   @GET("sync/watched/{type}")
   suspend fun fetchSyncWatched(
     @Path("type") type: String,

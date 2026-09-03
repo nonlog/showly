@@ -4,7 +4,8 @@ data class SyncHistoryItem(
   val id: Long,
   val type: String,
   val action: String,
-  val show: Show?,
-  val episode: Episode?,
-  val watched_at: String?,
+  val show: Show? = null,
+  val movie: Movie? = null,
+  val episode: Episode? = null,
+  val watched_at: String? = null,
 )

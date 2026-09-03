@@ -102,6 +102,29 @@ internal class AuthorizedTraktApi(
     return results
   }
 
+  override suspend fun fetchSyncHistory(
+    type: String,
+    afterId: Long,
+  ): List<SyncHistoryItem> {
+    var page = 1
+    val results = mutableListOf<SyncHistoryItem>()
+    while (true) {
+      val response = syncService.fetchSyncHistory(type, page, TRAKT_SYNC_PAGE_LIMIT)
+      val items = response.body().orEmpty()
+      results.addAll(items.filter { it.id > afterId })
+      val reachedCheckpoint = afterId > 0 && items.any { it.id <= afterId }
+      val pageCount = response.headers().getPaginationPageCount()
+      val isLastPage = when {
+        items.isEmpty() -> true
+        pageCount > 0 -> page >= pageCount
+        else -> items.size < TRAKT_SYNC_PAGE_LIMIT
+      }
+      if (reachedCheckpoint || isLastPage) break
+      page += 1
+    }
+    return results
+  }
+
   override suspend fun fetchSyncWatchedShows(extended: String?): List<SyncItem> {
     var page = 1
     val results = mutableListOf<SyncItem>()
