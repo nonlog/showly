@@ -29,6 +29,7 @@ class FloppyRemoteDataSourceTest {
   fun `rejects query parameters`() {
     normalizeFloppyBaseUrl("https://tracker.example.com?token=secret")
   }
+
   @Test
   fun `matches equivalent watched instants`() {
     assertTrue(

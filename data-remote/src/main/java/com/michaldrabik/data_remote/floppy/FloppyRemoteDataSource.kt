@@ -134,8 +134,7 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
       }.apply()
   }
 
-  override fun getHistoryCheckpoint(type: FloppyHistoryType): Long =
-    preferences.getLong(type.checkpointKey(), 0L)
+  override fun getHistoryCheckpoint(type: FloppyHistoryType): Long = preferences.getLong(type.checkpointKey(), 0L)
 
   override fun setHistoryCheckpoint(
     type: FloppyHistoryType,
@@ -152,7 +151,13 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
       return FloppyConnectionStatus.INVALID_CONFIGURATION
     }
     val infoCode = try {
-      executeRequest(Request.Builder().url("$baseUrl/api/v1/info/").get().build()).code
+      executeRequest(
+        Request
+          .Builder()
+          .url("$baseUrl/api/v1/info/")
+          .get()
+          .build(),
+      ).code
     } catch (_: IOException) {
       return FloppyConnectionStatus.UNREACHABLE
     }
@@ -160,7 +165,12 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     if (config.apiKey.isBlank()) return FloppyConnectionStatus.UNAUTHORIZED
     val preferencesCode = try {
       executeRequest(
-        Request.Builder().url("$baseUrl/api/v1/user/preferences/").header("X-API-Key", config.apiKey).get().build(),
+        Request
+          .Builder()
+          .url("$baseUrl/api/v1/user/preferences/")
+          .header("X-API-Key", config.apiKey)
+          .get()
+          .build(),
       ).code
     } catch (_: IOException) {
       return FloppyConnectionStatus.UNREACHABLE
