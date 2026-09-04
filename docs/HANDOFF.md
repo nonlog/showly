@@ -7,7 +7,7 @@ Last updated: 2026-09-04
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `7654a40918ba321584453ebc3f5fd12520225534` (`fix: compile bidirectional history bridge`).
+- Latest fully verified code head: `89fe98ea83c3aa874ac56c7071571cbbd7e3414e` (`feat: bridge custom lists bidirectionally`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -26,6 +26,9 @@ Last updated: 2026-09-04
 - Run #34 (`33833226001`) on `b918fed` failed only at Android resource compilation because the new helper string contained an unescaped apostrophe.
 - Run #35 (`33833367879`) on `dd2d5b0` passed resources/lint and reached Kotlin compilation; it exposed three History bridge compile errors that were corrected in `7654a40`.
 - Run #36 (`33833681276`) on `7654a40` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. This is the canonical verified S4 kernel baseline before the Custom Lists migration is pushed.
+- Run #37 (`33845655962`) on `89fe98e` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. This is the canonical verified S4 baseline including bidirectional Custom Lists.
+- Run #37 artifact: `showly-debug-89fe98ea83c3aa874ac56c7071571cbbd7e3414e`, 15,538,325 bytes, SHA-256 `adffdeb37d01bc82d760d4238920b4131588710dbc5824d3571fc3b51cc54382`. The extracted APK is 17,339,170 bytes with SHA-256 `1637400d567d9fae08602790472bd41877e217fc2b78897f363d7e9d7b6d03b1`.
+- On 2026-09-04, the #37 APK was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`). Production `com.michaldrabik.showly2` remained unchanged at `3.70.0` (`versionCode=840`). Temporary transfer files were removed from the device.
 
 ## Completed fork work
 
@@ -42,7 +45,7 @@ Last updated: 2026-09-04
 
 The product direction changed on 2026-09-04: Showly is no longer a one-way Trakt -> Floppy mirror. It is the synchronization bridge between Trakt.tv and Floppy. For shared mutable data, the newest mutation wins and the older side is overwritten.
 
-The core bridge kernel and credentials-sheet redesign are verified by Fork CI #36 at `7654a40`. The current working tree contains the next Custom Lists bidirectional migration and is not yet a verified code baseline.
+The bridge kernel, redesigned credentials sheet, and bidirectional Custom Lists migration are verified by Fork CI #37 at `89fe98e`.
 
 Conflict rules now being implemented:
 
@@ -60,7 +63,7 @@ Implemented in the current working tree:
 - **Ratings:** movie/show ratings are reconciled both ways. Floppy's latest `score` mutation is treated as the title-level bridge projection; Trakt's 1-10 integer scale is the common projection, so fractional Floppy scores are rounded only when exported to Trakt. Writing a rating to an untracked Floppy title uses an explicit `status: null` row so rating sync does not create a `Planning` watch state.
 - **Credentials UI:** the old oversized `MaterialAlertDialog` has been replaced with a Showly-styled expanded bottom sheet with Trakt/TMDB sections, field-level Trakt-pair validation, a primary save action, and a quiet restore-default action.
 
-Custom-list migration in the current working tree:
+Custom-list migration verified at `89fe98e`:
 
 - **List identity/bootstrap:** existing Showly-owned Floppy mappings are retained. An unpaired Trakt list adopts an unpaired Floppy list only when the shared metadata projection (name, description, public/private) has exactly one match; otherwise the missing counterpart is created. Unpaired Floppy lists get a Trakt/local counterpart instead of being ignored.
 - **List presence:** list creation/deletion now participates in the bridge ledger. First absence remains non-destructive; after a pair has been observed, a newer deletion on either provider deletes the older counterpart and local row.
@@ -75,7 +78,7 @@ Additional Floppy-only data (notes, playback progress, hidden/dropped semantics)
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
 - S1: Floppy settings screen against a real user API token.
 - S2: on-device bootstrap test against the configured Floppy account. GitHub CI verification for the current integrated branch is tracked above.
-- Device install baseline: CI #33 debug APK is installed and ready for account/feature validation; installation alone is not counted as S0.75/S1/S2/S3 functional validation.
+- Device install baseline: CI #37 debug APK is installed and ready for account/feature validation; installation alone is not counted as functional bridge validation.
 
 ## S3 active design: watchlist mirroring
 
@@ -109,10 +112,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Commit and push the Custom Lists latest-wins/tombstone migration with explicit Codex author/committer identity.
-2. Verify that migration in the next Fork CI run and repair any API/compile failures before advancing the verified code head.
-3. Install the resulting green APK on CPH2573 and validate the redesigned credentials sheet plus bidirectional history/watchlist/rating/list conflicts.
-4. Add durable retry/queue state and user-visible bridge status after the data domains are proven on-device.
+1. Validate the redesigned credentials sheet and real Floppy connection on CPH2573.
+2. Perform bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
+3. Add durable retry/queue state beyond retry-on-next-sync, without weakening the ledger/tombstone semantics.
+4. Add explicit manual/background bridge-sync UX and a user-visible last-sync/error/conflict status summary.
 
 ## Historical S3 rating finding (superseded by S4)
 
