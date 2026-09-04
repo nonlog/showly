@@ -42,7 +42,7 @@ class FloppyListsSyncRunner @Inject constructor(
 
       val currentItems = listsRepository
         .loadItemsById(list.id)
-        .mapNotNull(::resolveListItem)
+        .mapNotNull { resolveListItem(it) }
         .toSet()
       currentItems.forEach { item ->
         if (floppyListsSource.ensureOwnedListItem(list.id, item)) changes += 1
