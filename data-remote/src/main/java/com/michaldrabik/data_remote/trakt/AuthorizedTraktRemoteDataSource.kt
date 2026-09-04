@@ -78,6 +78,7 @@ interface AuthorizedTraktRemoteDataSource {
   suspend fun postCreateList(
     name: String,
     description: String?,
+    privacy: String? = null,
   ): CustomList
 
   suspend fun postUpdateList(customList: CustomList): CustomList

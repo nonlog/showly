@@ -96,10 +96,30 @@ Trakt exposes a title-level integer rating from 1 to 10. Floppy stores score on 
 
 Bridge execution remains non-fatal to Showly's mature Trakt worker. However, the ledger is updated only for writes that actually completed (or are already satisfied). A mapping/network failure therefore remains visible as divergent state and is retried on the next bridge run.
 
-## Custom lists: migration in progress
+## Custom lists
 
-The last verified S3 implementation is additive-only: Showly-created lists and TMDB movie/show memberships can be added to Floppy, but destructive list/member reconciliation was deliberately disabled because Floppy `list_item_id` is a renumbered position, not an immutable relation id.
+Custom lists now use the same bridge ledger rather than the old additive-only ownership rule.
 
-S4 changes the safety model. Custom lists will use current-state snapshots plus the bridge ledger/tombstones, so deletion authority comes from a newer observed mutation rather than from stale ownership of a relation id. Until that migration is complete, custom-list deletion remains disabled.
+### Pairing/bootstrap
 
-Floppy list membership still hydrates missing TMDB metadata through the non-tracking `/media/{type}/tmdb/{id}/sync/` route, so adding a title to a list does not silently change watch status.
+Existing Showly local-list -> Floppy-list mappings remain valid. For lists without a mapping, Showly adopts an existing unpaired Floppy list only when exactly one list has the same shared metadata projection (trimmed name, description, public/private). Ambiguous or non-matching lists are never guessed by name alone: Showly creates the missing counterpart. Floppy-only lists receive a Trakt list and a local Showly row.
+
+The local list id is the bridge pair key; the ledger also stores the corresponding Trakt and Floppy ids so a later provider/local deletion can still be reconciled.
+
+### Presence and deletion
+
+A first observation of an absent list is not considered a deletion. After the pair has been observed, disappearance on one provider creates a tombstone. Trakt list deletion uses the list-domain activity clock; Floppy deletion has no provider mutation timestamp and is therefore timestamped when Showly observes it. A newer deletion removes the older provider counterpart and local row; a newer surviving/recreated list restores the missing side.
+
+### Metadata
+
+The shared metadata projection is name + description + public/private. Trakt `updated_at` is used when Trakt changes. Floppy exposes no metadata-edit timestamp, so Showly stamps a changed Floppy metadata projection at observation time. `friends` has no Floppy equivalent and therefore projects to private; a Floppy private winner also becomes Trakt private.
+
+### Membership
+
+Movie/show membership uses TMDB identity. Trakt membership additions use `listed_at`; removals use the strongest available list/activity clock. Floppy does not expose stable per-membership mutation ids or timestamps: a changed Floppy membership is stamped at observation time. Newer add/remove wins and is written to the older side.
+
+Adding a Floppy member still hydrates missing TMDB metadata through the non-tracking `/media/{type}/tmdb/{id}/sync/` route. Removing a member uses the exact media/list association endpoint. The sequential Floppy `list_item_id` is not used as ownership/deletion authority.
+
+If TMDB -> Trakt identity resolution fails, the Trakt side remains divergent and the next bridge run retries instead of recording a false success.
+
+The list bridge runs a reconciliation pass before the existing Trakt list import/export runners and a second pass afterward. This ordering is intentional: a Trakt-side deletion must be observed before the legacy local exporter has an opportunity to recreate the list, while a local Showly edit exported to Trakt during the worker should reach Floppy before that same worker finishes. If both providers independently remove a member between bridge runs, its TMDB identity is reconstructed from the persisted member ledger key so the shared tombstone is still recorded.

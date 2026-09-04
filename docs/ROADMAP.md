@@ -69,8 +69,9 @@
 - [x] Implement bidirectional movie/show watchlist reconciliation by TMDB identity.
 - [x] Implement bidirectional movie/episode history reconciliation with independent rewatch events and deletion tombstones.
 - [x] Implement bidirectional movie/show rating reconciliation using Trakt's 1-10 title-rating projection without changing Floppy watch status.
-- [ ] Verify the S4 bridge kernel in Fork CI.
-- [ ] Migrate custom-list metadata and membership to the same latest-wins/tombstone model.
+- [x] Verify the core S4 bridge kernel (watchlist/history/ratings + ledger + credentials UI) in Fork CI #36.
+- [ ] Verify the Custom Lists latest-wins/tombstone migration in Fork CI.
+- [x] Migrate custom-list identity, presence, metadata, and movie/show membership to the same latest-wins/tombstone model.
 - [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy.
 - [ ] Add explicit manual/background bridge-sync UX and a user-visible conflict/status summary.
 - [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes.

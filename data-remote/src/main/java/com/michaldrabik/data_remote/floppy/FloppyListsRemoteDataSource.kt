@@ -12,6 +12,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.time.OffsetDateTime
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -30,6 +31,27 @@ internal data class FloppyListResponse(
   val id: Long,
 )
 
+data class FloppyBridgeList(
+  val id: Long,
+  val name: String,
+  val description: String,
+  val isPublic: Boolean,
+  val latestUpdate: Long,
+)
+
+internal data class FloppyListWire(
+  val id: Long,
+  val name: String,
+  val description: String = "",
+  @Json(name = "is_public") val isPublic: Boolean = false,
+  @Json(name = "latest_update") val latestUpdate: String? = null,
+)
+
+internal data class FloppyListEnvelope(
+  val pagination: FloppyBridgePagination = FloppyBridgePagination(),
+  val results: List<FloppyListWire> = emptyList(),
+)
+
 data class FloppyListItemRef(
   val type: FloppyWatchlistType,
   val tmdbId: Long,
@@ -43,6 +65,17 @@ private data class FloppyListHttpResponse(
 interface FloppyListsRemoteDataSource {
   fun getOwnedLocalListIds(): Set<Long>
 
+  fun getOwnedListMappings(): Map<Long, Long>
+
+  fun bindOwnedList(
+    localListId: Long,
+    remoteListId: Long,
+  )
+
+  suspend fun fetchLists(): List<FloppyBridgeList>
+
+  suspend fun fetchListItems(remoteListId: Long): Set<FloppyListItemRef>
+
   suspend fun ensureOwnedList(
     localListId: Long,
     name: String,
@@ -52,7 +85,14 @@ interface FloppyListsRemoteDataSource {
 
   fun releaseOwnedList(localListId: Long): Boolean
 
+  suspend fun deleteOwnedList(localListId: Long): Boolean
+
   suspend fun ensureListItem(
+    localListId: Long,
+    item: FloppyListItemRef,
+  ): Boolean
+
+  suspend fun removeListItem(
     localListId: Long,
     item: FloppyListItemRef,
   ): Boolean
@@ -72,8 +112,100 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
 
   private val listRequestAdapter = moshi.adapter(FloppyListRequest::class.java)
   private val listResponseAdapter = moshi.adapter(FloppyListResponse::class.java)
+  private val listEnvelopeAdapter = moshi.adapter(FloppyListEnvelope::class.java)
+  private val trackedEnvelopeAdapter = moshi.adapter(FloppyBridgeTrackedEnvelope::class.java)
 
   override fun getOwnedLocalListIds(): Set<Long> = getListOwnership().keys
+
+  override fun getOwnedListMappings(): Map<Long, Long> = getListOwnership()
+
+  override fun bindOwnedList(
+    localListId: Long,
+    remoteListId: Long,
+  ) {
+    require(localListId > 0) { "Local list id must be positive" }
+    require(remoteListId > 0) { "Remote list id must be positive" }
+    val ownership = getListOwnership().toMutableMap()
+    ownership.entries.removeAll { (ownedLocalId, ownedRemoteId) ->
+      ownedLocalId != localListId && ownedRemoteId == remoteListId
+    }
+    ownership[localListId] = remoteListId
+    saveListOwnership(ownership)
+  }
+
+  override suspend fun fetchLists(): List<FloppyBridgeList> {
+    val (config, baseUrl) = getSyncConfig()
+    val results = mutableListOf<FloppyBridgeList>()
+    var offset = 0
+    while (true) {
+      val response = executeRequest(
+        authenticatedRequestBuilder(
+          "$baseUrl/api/v1/lists/?limit=200&offset=$offset",
+          config.apiKey,
+        ).get().build(),
+      )
+      if (response.code !in 200..299) {
+        throw IOException("Floppy lists fetch failed with HTTP " + response.code)
+      }
+      val envelope = try {
+        listEnvelopeAdapter.fromJson(response.body)
+      } catch (error: Exception) {
+        throw IOException("Unable to parse Floppy lists response", error)
+      } ?: throw IOException("Floppy lists response was empty")
+      envelope.results.mapTo(results) { wire ->
+        FloppyBridgeList(
+          id = wire.id,
+          name = wire.name,
+          description = wire.description,
+          isPublic = wire.isPublic,
+          latestUpdate = wire.latestUpdate.toEpochMillisOrZeroForList(),
+        )
+      }
+      val nextOffset = offset + envelope.results.size
+      if (envelope.results.isEmpty() || nextOffset >= envelope.pagination.total) break
+      offset = nextOffset
+    }
+    return results
+  }
+
+  override suspend fun fetchListItems(remoteListId: Long): Set<FloppyListItemRef> {
+    require(remoteListId > 0) { "Remote list id must be positive" }
+    val (config, baseUrl) = getSyncConfig()
+    val results = linkedSetOf<FloppyListItemRef>()
+    var offset = 0
+    while (true) {
+      val response = executeRequest(
+        authenticatedRequestBuilder(
+          "$baseUrl/api/v1/lists/$remoteListId/items/?limit=200&offset=$offset",
+          config.apiKey,
+        ).get().build(),
+      )
+      if (response.code == 404) return emptySet()
+      if (response.code !in 200..299) {
+        throw IOException("Floppy list items fetch failed with HTTP " + response.code)
+      }
+      val envelope = try {
+        trackedEnvelopeAdapter.fromJson(response.body)
+      } catch (error: Exception) {
+        throw IOException("Unable to parse Floppy list items response", error)
+      } ?: throw IOException("Floppy list items response was empty")
+      envelope.results.mapNotNullTo(results) { wire ->
+        val item = wire.item ?: return@mapNotNullTo null
+        if (item.source != "tmdb") return@mapNotNullTo null
+        val tmdbId = item.mediaId?.toLongOrNull()?.takeIf { it > 0 } ?: return@mapNotNullTo null
+        val type = when (item.mediaType) {
+          "movie" -> FloppyWatchlistType.MOVIES
+          "tv" -> FloppyWatchlistType.SHOWS
+          else -> return@mapNotNullTo null
+        }
+        FloppyListItemRef(type, tmdbId)
+      }
+      val nextOffset = offset + envelope.results.size
+      if (envelope.results.isEmpty() || nextOffset >= envelope.pagination.total) break
+      offset = nextOffset
+    }
+    return results
+  }
 
   override suspend fun ensureOwnedList(
     localListId: Long,
@@ -126,6 +258,27 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
     return removed
   }
 
+  override suspend fun deleteOwnedList(localListId: Long): Boolean {
+    val remoteListId = getListOwnership()[localListId] ?: return false
+    val (config, baseUrl) = getSyncConfig()
+    val response = executeRequest(
+      authenticatedRequestBuilder("$baseUrl/api/v1/lists/$remoteListId/", config.apiKey)
+        .delete()
+        .build(),
+    )
+    return when (response.code) {
+      204 -> {
+        clearListOwnership(localListId)
+        true
+      }
+      404 -> {
+        clearListOwnership(localListId)
+        false
+      }
+      else -> throw IOException("Floppy list deletion failed with HTTP " + response.code)
+    }
+  }
+
   override suspend fun ensureListItem(
     localListId: Long,
     item: FloppyListItemRef,
@@ -153,6 +306,25 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
       in 200..299 -> true
       409 -> false
       else -> throw IOException("Floppy list item addition failed with HTTP " + response.code)
+    }
+  }
+
+  override suspend fun removeListItem(
+    localListId: Long,
+    item: FloppyListItemRef,
+  ): Boolean {
+    val remoteListId = getListOwnership()[localListId] ?: return false
+    val (config, baseUrl) = getSyncConfig()
+    val response = executeRequest(
+      authenticatedRequestBuilder(
+        "$baseUrl/api/v1/media/${item.type.mediaTypePath()}/tmdb/${item.tmdbId}/lists/$remoteListId/",
+        config.apiKey,
+      ).delete().build(),
+    )
+    return when (response.code) {
+      204 -> true
+      404 -> false
+      else -> throw IOException("Floppy list item removal failed with HTTP " + response.code)
     }
   }
 
@@ -254,6 +426,15 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
       FloppyWatchlistType.MOVIES -> "movie"
       FloppyWatchlistType.SHOWS -> "tv"
     }
+}
+
+private fun String?.toEpochMillisOrZeroForList(): Long {
+  if (this.isNullOrBlank()) return 0
+  return try {
+    OffsetDateTime.parse(this).toInstant().toEpochMilli()
+  } catch (_: Exception) {
+    0
+  }
 }
 
 internal fun encodeFloppyListOwnership(

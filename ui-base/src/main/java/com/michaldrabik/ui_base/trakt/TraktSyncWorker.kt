@@ -34,9 +34,9 @@ import com.michaldrabik.ui_base.events.TraktSyncProgress
 import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
 import com.michaldrabik.ui_base.floppy.FloppyBridgeHistoryRunner
+import com.michaldrabik.ui_base.floppy.FloppyBridgeListsRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeRatingsRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeWatchlistRunner
-import com.michaldrabik.ui_base.floppy.FloppyListsSyncRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportListsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportRatingsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportWatchedRunner
@@ -73,9 +73,9 @@ class TraktSyncWorker @AssistedInject constructor(
   private val exportRatingsRunner: TraktExportRatingsRunner,
   private val eventsManager: EventsManager,
   private val floppyBridgeHistoryRunner: FloppyBridgeHistoryRunner,
+  private val floppyBridgeListsRunner: FloppyBridgeListsRunner,
   private val floppyBridgeRatingsRunner: FloppyBridgeRatingsRunner,
   private val floppyBridgeWatchlistRunner: FloppyBridgeWatchlistRunner,
-  private val floppyListsSyncRunner: FloppyListsSyncRunner,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
@@ -183,6 +183,11 @@ class TraktSyncWorker @AssistedInject constructor(
     try {
       eventsManager.sendEvent(TraktSyncStart)
 
+      if (isImport || isExport) {
+        // Run list reconciliation before the mature Trakt list import/export path so
+        // a remote deletion is observed before the legacy exporter can recreate it.
+        runFloppyBridgeListsSync()
+      }
       if (isImport) {
         runImportWatched()
         runImportWatchlist()
@@ -199,7 +204,9 @@ class TraktSyncWorker @AssistedInject constructor(
         runFloppyBridgeHistorySync()
         runFloppyBridgeWatchlistSync()
         runFloppyBridgeRatingsSync()
-        runFloppyListsSync()
+        // Run lists again after the local<->Trakt path so local edits that were
+        // exported during this worker are propagated to Floppy in the same sync.
+        runFloppyBridgeListsSync()
       }
 
       miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
@@ -337,16 +344,16 @@ class TraktSyncWorker @AssistedInject constructor(
     }
   }
 
-  private suspend fun runFloppyListsSync() {
-    val status = "Syncing Floppy custom lists..."
+  private suspend fun runFloppyBridgeListsSync() {
+    val status = "Reconciling Trakt ↔ Floppy custom lists..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
     try {
-      floppyListsSyncRunner.run()
+      floppyBridgeListsRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
-      Timber.w(error, "Floppy custom-list sync failed. Trakt sync will still complete.")
-      Logger.record(error, "TraktSyncWorker::runFloppyListsSync()")
+      Timber.w(error, "Trakt <-> Floppy custom-list bridge failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyBridgeListsSync()")
     }
   }
 

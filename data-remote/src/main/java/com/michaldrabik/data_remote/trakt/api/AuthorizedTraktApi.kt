@@ -207,13 +207,14 @@ internal class AuthorizedTraktApi(
   override suspend fun postCreateList(
     name: String,
     description: String?,
+    privacy: String?,
   ): CustomList {
-    val body = CreateListRequest(name, description)
+    val body = CreateListRequest(name, description, privacy)
     return usersService.postCreateList(body)
   }
 
   override suspend fun postUpdateList(customList: CustomList): CustomList {
-    val body = CreateListRequest(customList.name, customList.description)
+    val body = CreateListRequest(customList.name, customList.description, customList.privacy)
     return usersService.postUpdateList(customList.ids.trakt, body)
   }
 

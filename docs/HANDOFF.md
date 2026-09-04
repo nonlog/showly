@@ -7,7 +7,7 @@ Last updated: 2026-09-04
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `16651c82cdac028009f2d9c39b0ad702be8c4dde` (`fix: make Floppy list sync additive-only`).
+- Latest fully verified code head: `7654a40918ba321584453ebc3f5fd12520225534` (`fix: compile bidirectional history bridge`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -23,6 +23,9 @@ Last updated: 2026-09-04
 - Run #33 (`33828952968`) on `16651c8` completed successfully: ktlint, selected unit tests, debug APK build, and artifact upload all passed.
 - Run #33 artifact: `showly-debug-16651c82cdac028009f2d9c39b0ad702be8c4dde`, 15,391,339 bytes, SHA-256 `b01f638bf066b78565b1bd1078a8a52fb2e1ab1a430802cf331b800c6bdd1d05`.
 - The extracted #33 APK is 17,189,924 bytes with SHA-256 `9379413335e2cd15e4113e9d8c4186b74f7548342f57992ddf2a0971d29704eb`. On 2026-09-04 it was installed successfully on the connected CPH2573 device as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); the production `com.michaldrabik.showly2` package remained at `3.70.0`.
+- Run #34 (`33833226001`) on `b918fed` failed only at Android resource compilation because the new helper string contained an unescaped apostrophe.
+- Run #35 (`33833367879`) on `dd2d5b0` passed resources/lint and reached Kotlin compilation; it exposed three History bridge compile errors that were corrected in `7654a40`.
+- Run #36 (`33833681276`) on `7654a40` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. This is the canonical verified S4 kernel baseline before the Custom Lists migration is pushed.
 
 ## Completed fork work
 
@@ -39,7 +42,7 @@ Last updated: 2026-09-04
 
 The product direction changed on 2026-09-04: Showly is no longer a one-way Trakt -> Floppy mirror. It is the synchronization bridge between Trakt.tv and Floppy. For shared mutable data, the newest mutation wins and the older side is overwritten.
 
-The current working tree introduces the bridge kernel but is not yet a verified GitHub code baseline. Until a new Fork CI run is green, `16651c8` remains the last verified code head.
+The core bridge kernel and credentials-sheet redesign are verified by Fork CI #36 at `7654a40`. The current working tree contains the next Custom Lists bidirectional migration and is not yet a verified code baseline.
 
 Conflict rules now being implemented:
 
@@ -57,10 +60,15 @@ Implemented in the current working tree:
 - **Ratings:** movie/show ratings are reconciled both ways. Floppy's latest `score` mutation is treated as the title-level bridge projection; Trakt's 1-10 integer scale is the common projection, so fractional Floppy scores are rounded only when exported to Trakt. Writing a rating to an untracked Floppy title uses an explicit `status: null` row so rating sync does not create a `Planning` watch state.
 - **Credentials UI:** the old oversized `MaterialAlertDialog` has been replaced with a Showly-styled expanded bottom sheet with Trakt/TMDB sections, field-level Trakt-pair validation, a primary save action, and a quiet restore-default action.
 
-Still to migrate to the new bridge kernel:
+Custom-list migration in the current working tree:
 
-- Custom-list metadata and membership are still on the verified S3 additive-only path. They must move to the same observed-state/tombstone model before list deletion can become bidirectional.
-- Additional Floppy-only data (notes, playback progress, hidden/dropped semantics) stays outside the bridge until a clean Trakt mapping exists.
+- **List identity/bootstrap:** existing Showly-owned Floppy mappings are retained. An unpaired Trakt list adopts an unpaired Floppy list only when the shared metadata projection (name, description, public/private) has exactly one match; otherwise the missing counterpart is created. Unpaired Floppy lists get a Trakt/local counterpart instead of being ignored.
+- **List presence:** list creation/deletion now participates in the bridge ledger. First absence remains non-destructive; after a pair has been observed, a newer deletion on either provider deletes the older counterpart and local row.
+- **List metadata:** name, description, and public/private projection use latest-wins. Trakt exposes `updated_at`; Floppy does not expose a metadata-edit timestamp, so an observed metadata transition is timestamped when Showly sees it. Trakt `friends` projects conservatively to private on Floppy.
+- **List membership:** movie/show membership uses TMDB identity. Trakt additions use `listed_at`; Floppy additions/removals without item-level mutation timestamps use observation time. Newer membership add/remove is propagated both ways, and Showly local membership follows the resolved state. The old `list_item_id` ownership workaround is no longer used as deletion authority.
+- **Failure safety:** identity lookup/network failures keep the unresolved side divergent in the ledger, so a later sync retries instead of falsely declaring convergence. The list bridge is deliberately invoked both before and after the mature Trakt list import/export path: the pre-pass observes remote deletion before the legacy exporter can recreate it, and the post-pass propagates local→Trakt edits to Floppy in the same worker run. Member tombstones recover TMDB identity from the persisted ledger key, so a member deleted independently on both providers still converges to absence.
+
+Additional Floppy-only data (notes, playback progress, hidden/dropped semantics) stays outside the bridge until a clean Trakt mapping exists.
 
 ## Validation still requiring a device/account
 
@@ -101,10 +109,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Run full Fork CI for the credentials-sheet redesign plus S4 bridge kernel (Room migration, resolver tests, data-remote parsing, Hilt graph, unit tests, APK build).
-2. Repair any compile/API-contract failures before declaring the new bridge head verified.
-3. Migrate custom-list metadata and membership from additive-only S3 behavior to the persisted latest-wins/tombstone bridge.
-4. Install the new green APK on CPH2573 and validate Trakt login, Floppy connection, bidirectional history/watchlist/rating conflicts, and then custom lists.
+1. Commit and push the Custom Lists latest-wins/tombstone migration with explicit Codex author/committer identity.
+2. Verify that migration in the next Fork CI run and repair any API/compile failures before advancing the verified code head.
+3. Install the resulting green APK on CPH2573 and validate the redesigned credentials sheet plus bidirectional history/watchlist/rating/list conflicts.
+4. Add durable retry/queue state and user-visible bridge status after the data domains are proven on-device.
 
 ## Historical S3 rating finding (superseded by S4)
 
