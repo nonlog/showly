@@ -22,6 +22,7 @@ Last updated: 2026-09-04
 - Runs #31 (`33828590003`) and #32 (`33828665265`) were intentionally superseded/cancelled by follow-up custom-list safety fixes.
 - Run #33 (`33828952968`) on `16651c8` completed successfully: ktlint, selected unit tests, debug APK build, and artifact upload all passed.
 - Run #33 artifact: `showly-debug-16651c82cdac028009f2d9c39b0ad702be8c4dde`, 15,391,339 bytes, SHA-256 `b01f638bf066b78565b1bd1078a8a52fb2e1ab1a430802cf331b800c6bdd1d05`.
+- The extracted #33 APK is 17,189,924 bytes with SHA-256 `9379413335e2cd15e4113e9d8c4186b74f7548342f57992ddf2a0971d29704eb`. On 2026-09-04 it was installed successfully on the connected CPH2573 device as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); the production `com.michaldrabik.showly2` package remained at `3.70.0`.
 
 ## Completed fork work
 
@@ -39,6 +40,7 @@ Last updated: 2026-09-04
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
 - S1: Floppy settings screen against a real user API token.
 - S2: on-device bootstrap test against the configured Floppy account. GitHub CI verification for the current integrated branch is tracked above.
+- Device install baseline: CI #33 debug APK is installed and ready for account/feature validation; installation alone is not counted as S0.75/S1/S2/S3 functional validation.
 
 ## S3 active design: watchlist mirroring
 
