@@ -74,7 +74,7 @@
 - [x] Migrate custom-list identity, presence, metadata, and movie/show membership to the same latest-wins/tombstone model.
 - [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy.
 - [x] Add an explicit manual `Trakt ↔ Floppy` sync action and persist last-attempt/last-success/change-count/failed-domain status for the settings UI.
-- [ ] Serialize manual/periodic full bridge runs and reset visible bridge status when the Floppy remote identity changes.
+- [x] Serialize manual/periodic full bridge runs and reset visible bridge status when the Floppy remote identity changes (verified in Fork CI #40).
 - [ ] Add per-domain pending/conflict detail beyond the current last-run summary.
 - [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes.
 
