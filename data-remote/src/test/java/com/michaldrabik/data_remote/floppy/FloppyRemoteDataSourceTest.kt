@@ -49,4 +49,30 @@ class FloppyRemoteDataSourceTest {
       ),
     )
   }
+
+  @Test
+  fun `detects Floppy identity changes but ignores enabled toggle`() {
+    val previous = FloppyConfig(enabled = true, baseUrl = "https://tracker.example.com", apiKey = "token-a")
+
+    assertFalse(isFloppyIdentityChanged(previous, previous.copy(enabled = false)))
+    assertTrue(isFloppyIdentityChanged(previous, previous.copy(baseUrl = "https://other.example.com")))
+    assertTrue(isFloppyIdentityChanged(previous, previous.copy(apiKey = "token-b")))
+  }
+
+  @Test
+  fun `encodes and decodes watchlist ownership`() {
+    val encoded = encodeFloppyWatchlistOwnership(tmdbId = 603, consumptionId = 42)
+
+    assertEquals("603:42", encoded)
+    assertEquals(603L to 42L, decodeFloppyWatchlistOwnership(encoded))
+  }
+
+  @Test
+  fun `rejects invalid watchlist ownership records`() {
+    assertEquals(null, decodeFloppyWatchlistOwnership(""))
+    assertEquals(null, decodeFloppyWatchlistOwnership("603"))
+    assertEquals(null, decodeFloppyWatchlistOwnership("-1:42"))
+    assertEquals(null, decodeFloppyWatchlistOwnership("603:0"))
+    assertEquals(null, decodeFloppyWatchlistOwnership("movie:42"))
+  }
 }

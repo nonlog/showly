@@ -2,13 +2,14 @@
 
 ## Purpose
 
-This repository is a maintainable fork of `trakt/showly` adding optional self-hosted Ryot tracking.
+This repository is a maintainable fork of `trakt/showly` adding optional self-hosted Floppy tracking.
 
-Before implementing Ryot work, read:
+Before implementing Floppy work, read:
 
 - `docs/PRODUCT.md`
 - `docs/ARCHITECTURE.md`
-- `docs/RYOT-INTEGRATION.md`
+- `docs/FLOPPY-INTEGRATION.md`
+- `docs/HANDOFF.md`
 - `docs/UPSTREAM.md`
 - `docs/ROADMAP.md`
 
@@ -18,11 +19,12 @@ Before implementing Ryot work, read:
 - Keep diffs narrow. Do not perform unrelated cleanup, formatting or dependency upgrades.
 - Do not remove Trakt in early milestones.
 - Do not migrate local database keys away from Trakt IDs without an explicit roadmap stage, migration design and tests.
-- Do not make Ryot internal database IDs part of Showly's canonical domain identity.
+- Do not make Floppy internal database IDs part of Showly's canonical domain identity.
 - Prefer TMDB/TVDB/IMDb plus season/episode coordinates at external integration boundaries.
 - Do not commit server URLs containing secrets, tokens, API keys, signing keys or local credential files.
 - GitHub Actions is the canonical build/test environment. Local builds are optional diagnostics, not a release prerequisite.
 - Every feature branch must remain reviewable against upstream.
+- Update `docs/HANDOFF.md` after each verified milestone, meaningful design change, blocker, or branch transition so a new session can resume without reconstructing history.
 
 ## Git identity
 

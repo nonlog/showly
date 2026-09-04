@@ -46,10 +46,15 @@
 
 ## S3 - Watchlist, ratings, and lists
 
-- Mirror watchlist state.
-- Mirror ratings.
-- Map custom lists where semantics match.
-- Define initial bootstrap/import behavior.
+- [x] Mirror the local Showly movie/show watchlist to Floppy Planning consumptions using TMDB identity.
+- [x] Reuse an existing Floppy Planning consumption instead of creating duplicates.
+- [x] Track ownership of Showly-created Planning consumptions and delete only those exact rows on watchlist removal.
+- [x] Fail safe when ownership is missing or a Floppy row was edited: preserve remote user data rather than guessing.
+- [x] Keep Floppy watchlist failures non-fatal to existing Trakt synchronization.
+- [ ] Verify the S3 watchlist slice in fork CI and perform an on-device bootstrap/add/remove test.
+- [ ] Mirror ratings.
+- [ ] Map custom lists where semantics match.
+- [ ] Define initial bootstrap/import behavior for ratings and custom lists.
 
 ## S4 - Bidirectional synchronization
 

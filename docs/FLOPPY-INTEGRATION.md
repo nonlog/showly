@@ -67,3 +67,15 @@ Before writing, Showly reads the stable Floppy media detail response and compare
 Changing the configured Floppy base URL or API key clears the history checkpoints. A new instance/account therefore bootstraps from Trakt history again, while consumption-time deduplication protects an existing account after token rotation.
 
 Floppy synchronization is deliberately non-fatal to Trakt synchronization. Deletion/tombstone propagation is deferred to the bidirectional-sync milestone.
+
+## S3 watchlist synchronization
+
+The first S3 slice mirrors Showly's local movie/show watchlist to Floppy `Planning` consumptions using TMDB identity. It runs after normal Trakt import/export so the local watchlist remains the source for this one-way bridge.
+
+Watchlist writes are deliberately ownership-aware. Before adding a title, Showly reads the Floppy media detail and treats any existing `Planning` consumption as already satisfied. When Showly must create a new `Planning` consumption, it stores only the resulting `consumption_id` alongside the TMDB id in local preferences. This ownership state is not a new canonical media identity; it exists only to make later deletion safe.
+
+When a title leaves Showly's watchlist, Showly deletes only the exact Floppy history row that this installation previously created, and only after re-reading the detail response and confirming that row still has numeric status `0` (`Planning`). It never uses the media-level delete endpoint, because that endpoint deletes all consumptions/history for the title. Existing/manual Floppy planning rows are not claimed and are therefore never deleted by Showly.
+
+If the owned row was edited to another status, disappeared, or local ownership state was lost, Showly drops or lacks ownership and preserves the Floppy data. This intentionally prefers a harmless stale planning row over destructive guessing. Changing the configured Floppy base URL or API key clears watchlist ownership together with history checkpoints because the account/instance identity may have changed.
+
+Floppy watchlist synchronization is non-fatal to the Trakt sync worker, matching the S2 history policy.
