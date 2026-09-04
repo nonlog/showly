@@ -55,7 +55,8 @@
 - [ ] Perform an on-device watchlist bootstrap/add/remove test.
 - [ ] Mirror ratings after a safe title-level score contract is defined; current Floppy score mutates a consumption row.
 - [x] Map movie/show custom lists as an additive Floppy mirror with owned list metadata and TMDB membership adds.
-- [ ] Verify the S3 custom-list slice in fork CI and on-device against an existing/manual Floppy list.
+- [x] Verify the S3 custom-list slice in fork CI.
+- [ ] Validate custom-list create/update/add behavior on-device against an existing/manual Floppy list.
 - [x] Define custom-list bootstrap as create-owned-without-name-adoption, preserving pre-existing Floppy lists/memberships.
 - [x] Defer custom-list member/list deletions to S4 because Floppy list_item_id is renumbered and cannot serve as immutable ownership.
 - [ ] Define ratings bootstrap only after a safe rating contract exists.

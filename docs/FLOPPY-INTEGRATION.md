@@ -82,7 +82,7 @@ Floppy watchlist synchronization is non-fatal to the Trakt sync worker, matching
 
 ## S3 custom-list synchronization
 
-Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. While that local list exists, the bridge may update the owned Floppy list's name, description, and public/private visibility. A pre-existing Floppy list with the same name remains independent.
+Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. While that local list exists, the bridge may update the owned Floppy list's name, description, and visibility. Floppy only exposes a public/private flag, so Showly `public` maps to public while both `private` and `friends` map conservatively to private. A pre-existing Floppy list with the same name remains independent.
 
 S3 list membership is intentionally additive-only. Current Showly movie/show items are added by TMDB identity; HTTP 409 simply means the membership already exists. Local member removal is not propagated to Floppy in S3. Local list deletion also does not delete the remote Floppy list: Showly only releases its local ownership mapping and leaves the remote list intact. This avoids deleting user edits or memberships that may have been added in Floppy after the mirror list was created.
 

@@ -7,8 +7,8 @@ Last updated: 2026-09-04
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Current development target: additive-only custom-list safety hardening on `feat/runtime-credentials-free-features`; record the exact code commit after CI verification.
-- Last fully verified GitHub head: `40532b012eedb8c229c03d5e4eb3b4eaa6a01b7e` (`feat: mirror watchlist to Floppy`).
+- Latest fully verified code head: `16651c82cdac028009f2d9c39b0ad702be8c4dde` (`fix: make Floppy list sync additive-only`).
+- Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
 
@@ -19,6 +19,9 @@ Last updated: 2026-09-04
 - Run #29 (`33827487599`) on `9cd1935` completed successfully: ktlint, unit tests, debug APK build, and artifact upload all passed.
 - Run #30 (`33828070287`) on `40532b0` completed successfully: ktlint, selected unit tests, debug APK build, and artifact upload all passed.
 - Run #30 artifact: `showly-debug-40532b012eedb8c229c03d5e4eb3b4eaa6a01b7e`, 15,376,997 bytes, SHA-256 `85fd19dd1ac621bc3fc248c1537684765dc5e18e9fa3274974ca93d40e663c04`.
+- Runs #31 (`33828590003`) and #32 (`33828665265`) were intentionally superseded/cancelled by follow-up custom-list safety fixes.
+- Run #33 (`33828952968`) on `16651c8` completed successfully: ktlint, selected unit tests, debug APK build, and artifact upload all passed.
+- Run #33 artifact: `showly-debug-16651c82cdac028009f2d9c39b0ad702be8c4dde`, 15,391,339 bytes, SHA-256 `b01f638bf066b78565b1bd1078a8a52fb2e1ab1a430802cf331b800c6bdd1d05`.
 
 ## Completed fork work
 
@@ -69,10 +72,9 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Commit/push the additive-only custom-list safety hardening and verify the resulting Fork CI run.
-2. Record the final custom-list code commit, run id, artifact digest, and verification status here.
-3. Perform the still-pending on-device Trakt login, real Floppy connection, S2 bootstrap, S3 watchlist add/remove, and custom-list create/add validation when device/account validation is available.
-4. Keep ratings blocked until a safe title-level score contract or explicit consumption-selection policy exists.
+1. Perform the still-pending on-device Trakt login, real Floppy connection, S2 bootstrap, S3 watchlist add/remove, and custom-list create/update/add validation when device/account validation is available.
+2. Keep ratings blocked until a safe title-level score contract or explicit consumption-selection policy exists.
+3. Start S4 only with an explicit authoritative-source/conflict/tombstone design; custom-list deletion must not be reintroduced ad hoc.
 
 ## Ratings design finding
 
@@ -84,7 +86,7 @@ Custom lists use an additive-only one-way mirror in S3:
 
 - create a new Floppy list for each local Showly list and store local Showly list id -> Floppy list id ownership;
 - never claim an existing Floppy list by matching its name;
-- update only an owned Floppy list's name, description, and public/private visibility while the local list exists;
+- update only an owned Floppy list's name, description, and visibility while the local list exists; Showly `public` maps to public, while `private` and `friends` map to private because Floppy has no friends-only equivalent;
 - add current movie/show members by TMDB identity; an existing membership (HTTP 409) is simply accepted;
 - hydrate missing TMDB Item metadata through Floppy's non-tracking `/media/{type}/tmdb/{id}/sync/` route before retrying list membership, rather than creating a tracking consumption;
 - do not propagate local member deletion in S3;
@@ -92,7 +94,7 @@ Custom lists use an additive-only one-way mirror in S3:
 
 The reason for the additive-only rule was verified directly in Floppy's current list model: `list_item_id` is a sequential list position and later rows are renumbered whenever one row is deleted. It is therefore not a stable relation identity. Even storing it locally cannot prove that a later relation with the same media/list pair is still the exact relation Showly originally created. Automatic list/member deletion would risk deleting user edits, so destructive list reconciliation is deferred to S4 conflict/tombstone design.
 
-The custom-list slice was pushed as `26a3995`; `c4fdf30` fixed the suspend item resolver call shape. A subsequent safety audit produced the current additive-only hardening in the working tree. The next pushed code head must be the canonical CI baseline; CI #32 on `c4fdf30` is superseded by this safety correction.
+The custom-list slice was introduced in `26a3995`; `c4fdf30` fixed the suspend item resolver call shape. Safety review then identified that Floppy `list_item_id` is renumbered, so `16651c8` removed destructive member/list reconciliation and made the S3 mirror additive-only. Fork CI #33 is green on `16651c8`, making it the canonical custom-list code baseline.
 
 ## Do not change without an explicit new design
 
