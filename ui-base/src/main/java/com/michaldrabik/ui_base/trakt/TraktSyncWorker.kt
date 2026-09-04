@@ -55,6 +55,8 @@ import com.michaldrabik.ui_base.utilities.extensions.rethrowCancellation
 import com.michaldrabik.ui_model.TraktSyncSchedule
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Named
 import kotlin.time.Duration.Companion.days
@@ -102,6 +104,8 @@ class TraktSyncWorker @AssistedInject constructor(
     private const val ARG_IS_IMPORT = "ARG_IS_IMPORT"
     private const val ARG_IS_EXPORT = "ARG_IS_EXPORT"
     private const val ARG_IS_SILENT = "ARG_IS_SILENT"
+
+    private val SYNC_MUTEX = Mutex()
 
     const val TRAKT_LISTS_INFO_URL =
       "https://releasenotes.trakt.tv/release/Y2LCE-january-21-2025"
@@ -181,7 +185,7 @@ class TraktSyncWorker @AssistedInject constructor(
     }
   }
 
-  override suspend fun doWork(): Result {
+  override suspend fun doWork(): Result = SYNC_MUTEX.withLock {
     val isImport = inputData.getBoolean(ARG_IS_IMPORT, false)
     val isExport = inputData.getBoolean(ARG_IS_EXPORT, false)
     val isSilent = inputData.getBoolean(ARG_IS_SILENT, false)
@@ -229,11 +233,11 @@ class TraktSyncWorker @AssistedInject constructor(
           createSuccessNotification(),
         )
       }
-      return Result.success()
+      return@withLock Result.success()
     } catch (error: Throwable) {
       if (bridgeEnabled) markFloppyBridgeFailure("trakt-sync")
       handleError(error, isSilent)
-      return Result.failure()
+      return@withLock Result.failure()
     } finally {
       clearRunners()
       notificationManager().cancel(SYNC_NOTIFICATION_COMPLETE_PROGRESS_ID)

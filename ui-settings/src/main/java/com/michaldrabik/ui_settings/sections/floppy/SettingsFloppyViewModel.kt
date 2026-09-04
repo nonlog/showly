@@ -68,8 +68,11 @@ class SettingsFloppyViewModel @Inject constructor(
         return@launch
       }
 
+      val identityChanged =
+        configState.value.baseUrl != config.baseUrl || configState.value.apiKey != config.apiKey
       configState.value = config
       floppyRemoteDataSource.saveConfig(config)
+      if (identityChanged) clearBridgeStatus()
       testConnection(config)
     }
   }
@@ -93,6 +96,17 @@ class SettingsFloppyViewModel @Inject constructor(
       changes = miscPreferences.getInt(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_CHANGES, 0),
       failedDomains = miscPreferences.getString(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_FAILURES, "").orEmpty(),
     )
+  }
+
+  private fun clearBridgeStatus() {
+    miscPreferences
+      .edit()
+      .remove(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_ATTEMPT)
+      .remove(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_SUCCESS)
+      .remove(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_CHANGES)
+      .remove(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_FAILURES)
+      .apply()
+    bridgeState.value = FloppyBridgeRunUiState()
   }
 
   private suspend fun testConnection(config: FloppyConfig) {

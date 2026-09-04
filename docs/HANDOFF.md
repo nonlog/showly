@@ -31,6 +31,7 @@ Last updated: 2026-09-04
 - On 2026-09-04, the #37 APK was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`). Production `com.michaldrabik.showly2` remained unchanged at `3.70.0` (`versionCode=840`). Temporary transfer files were removed from the device.
 - Read-only device validation after the #37 install confirmed the saved Trakt access/refresh-token entries are still present, the saved Floppy enable/base URL/API-key entries are still present, and the configured Floppy instance returns HTTP 200 for both `/api/v1/info/` and authenticated `/api/v1/user/preferences/`. No credential values were printed or stored in the handoff.
 - Room opened at schema/user version 42 with the `bridge_sync_state` table present (10 columns). It had 0 bridge rows at the validation point, confirming no bidirectional reconciliation had been run yet. Temporary database-extraction files used for the schema check were removed.
+- Run #38 (`33852569892`) on `3733905` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-3733905252779db1f5a0de5324016729e09a5cef` is 15,546,615 bytes with SHA-256 `76a42ae41908552ad0c5c884d8c644f259a9c91d67ca314d6e6c9d42b853607d`; the extracted APK is 17,346,818 bytes with SHA-256 `e5c2ae7e34ba85b441ff2be90ae464e07bb7330377571e057ce3e22682fe9240`. It was installed successfully on CPH2573 as the debug package; production Showly was not touched.
 
 ## Completed fork work
 
@@ -49,7 +50,9 @@ The product direction changed on 2026-09-04: Showly is no longer a one-way Trakt
 
 The bridge kernel, redesigned credentials sheet, and bidirectional Custom Lists migration are verified by Fork CI #37 at `89fe98e`.
 
-The current working tree adds a user-visible/manual bridge control surface. It records bridge attempt/success timestamps, the number of reconciliation changes, and failed domains separately from the mature Trakt worker result; the Floppy settings page exposes a `Sync Trakt ↔ Floppy now` action only when Trakt is authorized and the Floppy connection is healthy. This working tree is not a verified baseline until the next Fork CI run passes.
+Fork CI #38 verified the user-visible/manual bridge control surface at `3733905`: it records bridge attempt/success timestamps, the number of reconciliation changes, and failed domains separately from the mature Trakt worker result; the Floppy settings page exposes a `Sync Trakt ↔ Floppy now` action only when Trakt is authorized and the Floppy connection is healthy. The #38 APK was installed successfully on CPH2573.
+
+The current working tree adds two follow-up safety guards: all full `TraktSyncWorker` executions are serialized with an in-process mutex so periodic and manual runs cannot reconcile the same bridge ledger concurrently, and changing the saved Floppy endpoint/API key clears the visible last-run bridge status alongside the existing ledger/ownership reset. This follow-up is not a verified baseline until the next Fork CI run passes.
 
 Conflict rules now being implemented:
 
@@ -116,7 +119,7 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Verify the manual bridge/status UX working tree in Fork CI, then install the resulting APK on CPH2573.
+1. Verify the worker-serialization and Floppy-identity status-reset hardening in Fork CI.
 2. Visually validate the redesigned credentials sheet and the new Floppy bridge status row without using automated foreground screenshots.
 3. Perform controlled bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
 4. Add durable retry/queue state beyond retry-on-next-sync and expose per-domain pending/conflict detail after the data-domain tests are proven.
