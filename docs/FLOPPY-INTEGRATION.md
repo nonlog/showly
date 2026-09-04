@@ -42,56 +42,64 @@ The base URL must use HTTP or HTTPS, contain a host, and must not contain embedd
 
 The reviewed /api/v1 contract is suitable for the planned vertical slices: search/details, consumption/history, episode watched state, ratings, and list operations. New code should depend on the reviewed contract rather than undocumented internal endpoints whenever possible.
 
-## Trakt to Floppy bridge
+## Trakt ↔ Floppy bridge
 
-The intended first synchronization direction is:
+Showly is the synchronization coordinator between Trakt.tv and Floppy. Neither provider is globally authoritative. For a shared mutable value, the provider with the newest mutation wins and Showly writes that value to the older side.
 
 ```text
-Trakt.tv
-   ↓ existing Trakt sync
-Showly local model
-   ↓ Floppy adapter
-Floppy
+Trakt.tv  ⇄  Showly bridge ledger/resolver  ⇄  Floppy
+                    ⇅
+              Showly local DB
 ```
 
-This lets the fork preserve mature Trakt synchronization while adding a self-hosted copy. A later stage may add Floppy-originated changes flowing back to Trakt, but only after conflict and deletion semantics are defined.
+### Conflict clock
 
-## S2 history synchronization
+The bridge uses the strongest timestamp available for each domain:
 
-S2 mirrors the actual Trakt history event stream rather than reconstructing history from Showly's local watched flags. This preserves every rewatch event and its original watched_at timestamp.
+1. exact item/field timestamps, such as Trakt `listed_at` and `rated_at` or Floppy `changes_history.history_date`;
+2. Trakt domain activity timestamps when an item disappeared and Trakt does not expose a per-delete timestamp;
+3. Showly observation time for a transition when the provider exposes no mutation timestamp.
 
-Movie and episode history maintain separate Trakt history-id checkpoints. Trakt history pages are still scanned to completion because the API is ordered by watched time: a newly added backdated event can have a newer history ID on an older page. The checkpoint is therefore used as a local event filter, not as an unsafe early-pagination stop. It advances only after an event is successfully written, already present, or cannot be mapped because required external identity is missing. A Floppy/network failure leaves the current event uncheckpointed so the next Trakt sync retries it.
+The bridge never interprets a first observation of absence as a deletion. Once a value has been observed, a later disappearance creates a tombstone with its mutation/observation time. A newer re-add can therefore beat an older tombstone. Equal values converge without a winner. Exact timestamp ties preserve the previous resolved value when possible, then use Trakt only as a deterministic tie-breaker.
 
-Before writing, Showly reads the stable Floppy media detail response and compares existing consumptions[].end_date with the Trakt watched_at instant. A malformed successful detail response fails closed and is retried instead of being treated as an empty history. Equivalent instants with different timezone offsets are treated as the same watch. This makes retries idempotent even if the app stops after the Floppy write but before persisting the checkpoint.
+Bridge state is stored in the local `bridge_sync_state` Room table. The ledger is scoped to a fingerprint of the current Trakt account plus Floppy endpoint/account identity. If that remote identity changes, the ledger is cleared so tombstones from one account cannot delete data in another.
 
-Changing the configured Floppy base URL or API key clears the history checkpoints. A new instance/account therefore bootstraps from Trakt history again, while consumption-time deduplication protects an existing account after token rotation.
+### History and rewatches
 
-Floppy synchronization is deliberately non-fatal to Trakt synchronization. Deletion/tombstone propagation is deferred to the bidirectional-sync milestone.
+History is modeled as an event set, not as one scalar watched flag. An event key contains the provider-neutral media identity plus exact watched instant:
 
-## S3 watchlist synchronization
+- movie: TMDB id + watched instant;
+- episode: parent-show TMDB id + season + episode + watched instant.
 
-The first S3 slice mirrors Showly's local movie/show watchlist to Floppy `Planning` consumptions using TMDB identity. It runs after normal Trakt import/export so the local watchlist remains the source for this one-way bridge.
+Each rewatch is independent. On bootstrap, an event present on only one provider is copied to the other. After both sides have been observed, removing an event produces a tombstone; if that deletion is newer than the other side's presence, it is removed there too. Re-adding the same event later can resurrect it.
 
-Watchlist writes are deliberately ownership-aware. Before adding a title, Showly reads the Floppy media detail and treats any existing `Planning` consumption as already satisfied. When Showly must create a new `Planning` consumption, it stores only the resulting `consumption_id` alongside the TMDB id in local preferences. This ownership state is not a new canonical media identity; it exists only to make later deletion safe.
+Floppy exact-consumption deletion is used for movie plays and episode consumptions; broad media-level delete is never used for history reconciliation.
 
-When a title leaves Showly's watchlist, Showly deletes only the exact Floppy history row that this installation previously created, and only after re-reading the detail response and confirming that row still has numeric status `0` (`Planning`). It never uses the media-level delete endpoint, because that endpoint deletes all consumptions/history for the title. Existing/manual Floppy planning rows are not claimed and are therefore never deleted by Showly.
+### Watchlist
 
-If the owned row was edited to another status, disappeared, or local ownership state was lost, Showly drops or lacks ownership and preserves the Floppy data. This intentionally prefers a harmless stale planning row over destructive guessing. Changing the configured Floppy base URL or API key clears watchlist ownership together with history checkpoints because the account/instance identity may have changed.
+The bridge maps Trakt movie/show watchlist membership to Floppy `Planning` state using TMDB identity. Trakt `listed_at` is the exact add timestamp; Trakt last-activity supplies the deletion clock. Floppy uses `created_at` for initial Planning rows and `changes_history` status mutations for transitions.
 
-Floppy watchlist synchronization is non-fatal to the Trakt sync worker, matching the S2 history policy.
+A newer add restores the older side; a newer removal clears the older side. Showly local watchlist state is updated to the resolved result. If TMDB→Trakt identity cannot be resolved, the unsynchronized side remains recorded as absent so a later sync retries instead of falsely marking convergence.
 
-## S3 custom-list synchronization
+### Ratings
 
-Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. While that local list exists, the bridge may update the owned Floppy list's name, description, and visibility. Floppy only exposes a public/private flag, so Showly `public` maps to public while both `private` and `friends` map conservatively to private. A pre-existing Floppy list with the same name remains independent.
+Trakt exposes a title-level integer rating from 1 to 10. Floppy stores score on consumption records, so the bridge defines an explicit projection rather than pretending the data models are identical:
 
-S3 list membership is intentionally additive-only. Current Showly movie/show items are added by TMDB identity; HTTP 409 simply means the membership already exists. Local member removal is not propagated to Floppy in S3. Local list deletion also does not delete the remote Floppy list: Showly only releases its local ownership mapping and leaves the remote list intact. This avoids deleting user edits or memberships that may have been added in Floppy after the mirror list was created.
+- the latest Floppy `score` field mutation from `changes_history` is the Floppy title-rating projection;
+- Trakt `rated_at` is the Trakt mutation timestamp;
+- a newer value or rating removal overwrites the older side;
+- fractional Floppy scores are preserved in Floppy while their Trakt projection is rounded to the nearest 1-10 integer;
+- changing a score on Floppy does not change the row's tracking status;
+- if a title has no Floppy tracking row, a Trakt rating is written as a score-only row with explicit `status: null`, never the API's implicit `Planning` default.
 
-This conservative rule is required by the current Floppy contract. The exposed `list_item_id` is a sequential list position and is renumbered after deletions, so it is not an immutable ownership token. Without a stable relation identity or conflict/tombstone policy, destructive reconciliation cannot distinguish an original Showly-created relation from later user edits. Deletions are therefore deferred to S4, where conflict and tombstone semantics are explicitly planned.
+### Failure semantics
 
-Floppy list membership requires the provider `Item` metadata row to exist, but this does not require creating a tracking consumption. On an initial membership 404, Showly calls Floppy's non-tracking `POST /api/v1/media/{type}/tmdb/{id}/sync/` metadata route and retries the membership PUT. This lets lists contain catalog items without silently changing watch status.
+Bridge execution remains non-fatal to Showly's mature Trakt worker. However, the ledger is updated only for writes that actually completed (or are already satisfied). A mapping/network failure therefore remains visible as divergent state and is retried on the next bridge run.
 
-Changing the configured Floppy base URL or API key clears list ownership together with the watchlist/history state. Missing ownership always fails safe: Showly may leave stale or duplicate remote lists after reinstall/account changes, but it will not guess that an arbitrary remote list belongs to this installation.
+## Custom lists: migration in progress
 
-## S3 rating boundary
+The last verified S3 implementation is additive-only: Showly-created lists and TMDB movie/show memberships can be added to Floppy, but destructive list/member reconciliation was deliberately disabled because Floppy `list_item_id` is a renumbered position, not an immutable relation id.
 
-Generic movie/show rating mirroring is intentionally deferred. In the reviewed Floppy contract, `score` is a field on a consumption. The generic media PATCH updates the convenience/default tracked row and POST creates a new consumption, so copying a Trakt title rating through either route can alter watch-history semantics. Until Floppy exposes a safe title-level rating contract, or an explicit mapping policy is adopted, the bridge must not synthesize or rewrite consumptions merely to mirror ratings.
+S4 changes the safety model. Custom lists will use current-state snapshots plus the bridge ledger/tombstones, so deletion authority comes from a newer observed mutation rather than from stale ownership of a relation id. Until that migration is complete, custom-list deletion remains disabled.
+
+Floppy list membership still hydrates missing TMDB metadata through the non-tracking `/media/{type}/tmdb/{id}/sync/` route, so adding a title to a list does not silently change watch status.

@@ -35,6 +35,33 @@ Last updated: 2026-09-04
 - Free Light/System themes restored.
 - Free Compact/Grid list view modes added.
 
+## S4 active direction: Trakt ↔ Floppy bridge
+
+The product direction changed on 2026-09-04: Showly is no longer a one-way Trakt -> Floppy mirror. It is the synchronization bridge between Trakt.tv and Floppy. For shared mutable data, the newest mutation wins and the older side is overwritten.
+
+The current working tree introduces the bridge kernel but is not yet a verified GitHub code baseline. Until a new Fork CI run is green, `16651c8` remains the last verified code head.
+
+Conflict rules now being implemented:
+
+1. Use an exact provider timestamp when one exists: Trakt `listed_at` / `rated_at`, Trakt last-activity timestamps for domain deletions, and Floppy `changes_history.history_date` for status/score changes.
+2. If an API exposes the state change but no per-item mutation timestamp, stamp the transition when Showly observes it. This is the tombstone time used for future latest-wins comparisons.
+3. The first time an item is absent is only an observation, never an inferred deletion. A deletion exists only when a previously observed value disappears.
+4. If both sides have the same value, converge without forcing a winner. Exact timestamp ties preserve the previously resolved value when possible; otherwise Trakt is the deterministic final tie-breaker.
+5. Bridge state is persisted in Room (`bridge_sync_state`, schema 42). It stores values/timestamps only. A SHA-256 fingerprint of Trakt account + Floppy endpoint/account credential identity guards the ledger; a remote identity change clears the ledger instead of applying stale tombstones to a different account.
+6. Bridge failures remain non-fatal to the existing Trakt worker, but a failed side is not falsely recorded as synchronized so it can retry.
+
+Implemented in the current working tree:
+
+- **Watchlist:** movie/show `Planning` presence is reconciled in both directions by TMDB identity. Trakt `listed_at`, Trakt watchlist activity, Floppy `created_at`, and Floppy status change history feed the conflict clock.
+- **History / rewatches:** each exact movie or episode watch instant is an independent event. Trakt and Floppy event sets are reconciled both ways. A later observed deletion becomes an event tombstone; a later re-add can resurrect the event. Independent rewatches are not collapsed.
+- **Ratings:** movie/show ratings are reconciled both ways. Floppy's latest `score` mutation is treated as the title-level bridge projection; Trakt's 1-10 integer scale is the common projection, so fractional Floppy scores are rounded only when exported to Trakt. Writing a rating to an untracked Floppy title uses an explicit `status: null` row so rating sync does not create a `Planning` watch state.
+- **Credentials UI:** the old oversized `MaterialAlertDialog` has been replaced with a Showly-styled expanded bottom sheet with Trakt/TMDB sections, field-level Trakt-pair validation, a primary save action, and a quiet restore-default action.
+
+Still to migrate to the new bridge kernel:
+
+- Custom-list metadata and membership are still on the verified S3 additive-only path. They must move to the same observed-state/tombstone model before list deletion can become bidirectional.
+- Additional Floppy-only data (notes, playback progress, hidden/dropped semantics) stays outside the bridge until a clean Trakt mapping exists.
+
 ## Validation still requiring a device/account
 
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
@@ -74,13 +101,14 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Perform the still-pending on-device Trakt login, real Floppy connection, S2 bootstrap, S3 watchlist add/remove, and custom-list create/update/add validation when device/account validation is available.
-2. Keep ratings blocked until a safe title-level score contract or explicit consumption-selection policy exists.
-3. Start S4 only with an explicit authoritative-source/conflict/tombstone design; custom-list deletion must not be reintroduced ad hoc.
+1. Run full Fork CI for the credentials-sheet redesign plus S4 bridge kernel (Room migration, resolver tests, data-remote parsing, Hilt graph, unit tests, APK build).
+2. Repair any compile/API-contract failures before declaring the new bridge head verified.
+3. Migrate custom-list metadata and membership from additive-only S3 behavior to the persisted latest-wins/tombstone bridge.
+4. Install the new green APK on CPH2573 and validate Trakt login, Floppy connection, bidirectional history/watchlist/rating conflicts, and then custom lists.
 
-## Ratings design finding
+## Historical S3 rating finding (superseded by S4)
 
-Do not implement generic Trakt rating mirroring yet. In the current Floppy API, `score` is stored on a consumption row rather than as an independent title-level rating. The generic media PATCH chooses the convenience/default tracked row (`user_medias[0]`), while POST creates a new consumption (defaulting to Planning when status is omitted). Either path can mutate tracking semantics merely to copy a rating, especially for rewatches. The dedicated score route currently exists for episodes but not as a symmetric movie/show title-level contract. S3 ratings therefore remains intentionally blocked until an explicit safe mapping is defined or Floppy exposes a title-level rating contract.
+S3 intentionally did not implement generic Trakt rating mirroring. In the current Floppy API, `score` is stored on a consumption row rather than as an independent title-level rating. The generic media PATCH chooses the convenience/default tracked row (`user_medias[0]`), while POST creates a new consumption (defaulting to Planning when status is omitted). Either path can mutate tracking semantics merely to copy a rating, especially for rewatches. The dedicated score route currently exists for episodes but not as a symmetric movie/show title-level contract. S4 now supplies that explicit mapping: the bridge treats the latest Floppy `score` mutation as the title-level projection, never changes status while updating an existing score, and creates a score-only Floppy row with explicit `status: null` when no tracking row exists.
 
 ## S3 custom-list design
 
@@ -103,4 +131,4 @@ The custom-list slice was introduced in `26a3995`; `c4fdf30` fixed the suspend i
 - Trakt remains supported and remains Showly's mature synchronization path.
 - Local canonical identity remains Trakt-based for now; provider-neutral database migration is deferred.
 - Floppy integration boundaries prefer TMDB/TVDB/IMDb plus season/episode coordinates, never Floppy internal item ids.
-- Do not make Floppy-originated changes flow back into Showly/Trakt until S4 conflict and deletion semantics are designed.
+- Floppy-originated changes are now allowed only through the S4 bridge resolver/ledger. Do not add ad-hoc reverse writes that bypass its timestamp and tombstone rules.

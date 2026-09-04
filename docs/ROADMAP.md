@@ -53,21 +53,27 @@
 - [x] Keep Floppy watchlist failures non-fatal to existing Trakt synchronization.
 - [x] Verify the S3 watchlist slice in fork CI.
 - [ ] Perform an on-device watchlist bootstrap/add/remove test.
-- [ ] Mirror ratings after a safe title-level score contract is defined; current Floppy score mutates a consumption row.
+- [x] Defer ratings in S3 until S4 defines a safe bridge projection; S4 now owns rating synchronization.
 - [x] Map movie/show custom lists as an additive Floppy mirror with owned list metadata and TMDB membership adds.
 - [x] Verify the S3 custom-list slice in fork CI.
 - [ ] Validate custom-list create/update/add behavior on-device against an existing/manual Floppy list.
 - [x] Define custom-list bootstrap as create-owned-without-name-adoption, preserving pre-existing Floppy lists/memberships.
 - [x] Defer custom-list member/list deletions to S4 because Floppy list_item_id is renumbered and cannot serve as immutable ownership.
-- [ ] Define ratings bootstrap only after a safe rating contract exists.
+- [x] Define rating bootstrap/conflict behavior in the S4 bridge ledger.
 
-## S4 - Bidirectional synchronization
+## S4 - Bidirectional Trakt ↔ Floppy bridge
 
-- Define authoritative-source modes.
-- Define timestamp, deletion/tombstone, and duplicate rewatch semantics.
-- Add durable Floppy queue/retry behavior.
-- Add manual/background sync UX.
-- Only then evaluate Floppy-originated changes flowing back through Showly local state to Trakt.
+- [x] Adopt Showly as the bridge rather than treating Trakt as the permanent authoritative source.
+- [x] Define latest-mutation-wins semantics with provider timestamps, observed tombstones, first-observation protection, and deterministic ties.
+- [x] Add a durable Room bridge ledger and clear it when the Trakt/Floppy remote identity changes.
+- [x] Implement bidirectional movie/show watchlist reconciliation by TMDB identity.
+- [x] Implement bidirectional movie/episode history reconciliation with independent rewatch events and deletion tombstones.
+- [x] Implement bidirectional movie/show rating reconciliation using Trakt's 1-10 title-rating projection without changing Floppy watch status.
+- [ ] Verify the S4 bridge kernel in Fork CI.
+- [ ] Migrate custom-list metadata and membership to the same latest-wins/tombstone model.
+- [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy.
+- [ ] Add explicit manual/background bridge-sync UX and a user-visible conflict/status summary.
+- [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes.
 
 ## S5 - Additional user data
 

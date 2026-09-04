@@ -33,9 +33,10 @@ import com.michaldrabik.ui_base.events.TraktSyncError
 import com.michaldrabik.ui_base.events.TraktSyncProgress
 import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
-import com.michaldrabik.ui_base.floppy.FloppyHistorySyncRunner
+import com.michaldrabik.ui_base.floppy.FloppyBridgeHistoryRunner
+import com.michaldrabik.ui_base.floppy.FloppyBridgeRatingsRunner
+import com.michaldrabik.ui_base.floppy.FloppyBridgeWatchlistRunner
 import com.michaldrabik.ui_base.floppy.FloppyListsSyncRunner
-import com.michaldrabik.ui_base.floppy.FloppyWatchlistSyncRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportListsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportRatingsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportWatchedRunner
@@ -71,9 +72,10 @@ class TraktSyncWorker @AssistedInject constructor(
   private val exportListsRunner: TraktExportListsRunner,
   private val exportRatingsRunner: TraktExportRatingsRunner,
   private val eventsManager: EventsManager,
-  private val floppyHistorySyncRunner: FloppyHistorySyncRunner,
+  private val floppyBridgeHistoryRunner: FloppyBridgeHistoryRunner,
+  private val floppyBridgeRatingsRunner: FloppyBridgeRatingsRunner,
+  private val floppyBridgeWatchlistRunner: FloppyBridgeWatchlistRunner,
   private val floppyListsSyncRunner: FloppyListsSyncRunner,
-  private val floppyWatchlistSyncRunner: FloppyWatchlistSyncRunner,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
@@ -194,8 +196,9 @@ class TraktSyncWorker @AssistedInject constructor(
         runExportRatings()
       }
       if (isImport || isExport) {
-        runFloppyHistorySync()
-        runFloppyWatchlistSync()
+        runFloppyBridgeHistorySync()
+        runFloppyBridgeWatchlistSync()
+        runFloppyBridgeRatingsSync()
         runFloppyListsSync()
       }
 
@@ -295,29 +298,42 @@ class TraktSyncWorker @AssistedInject constructor(
     }
   }
 
-  private suspend fun runFloppyHistorySync() {
-    val status = "Syncing Floppy history..."
+  private suspend fun runFloppyBridgeHistorySync() {
+    val status = "Reconciling Trakt ↔ Floppy history..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
     try {
-      floppyHistorySyncRunner.run()
+      floppyBridgeHistoryRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
-      Timber.w(error, "Floppy history sync failed. Trakt sync will still complete.")
-      Logger.record(error, "TraktSyncWorker::runFloppyHistorySync()")
+      Timber.w(error, "Trakt <-> Floppy history bridge failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyBridgeHistorySync()")
     }
   }
 
-  private suspend fun runFloppyWatchlistSync() {
-    val status = "Syncing Floppy watchlist..."
+  private suspend fun runFloppyBridgeWatchlistSync() {
+    val status = "Reconciling Trakt ↔ Floppy watchlist..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
     try {
-      floppyWatchlistSyncRunner.run()
+      floppyBridgeWatchlistRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
-      Timber.w(error, "Floppy watchlist sync failed. Trakt sync will still complete.")
-      Logger.record(error, "TraktSyncWorker::runFloppyWatchlistSync()")
+      Timber.w(error, "Trakt <-> Floppy watchlist bridge failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyBridgeWatchlistSync()")
+    }
+  }
+
+  private suspend fun runFloppyBridgeRatingsSync() {
+    val status = "Reconciling Trakt ↔ Floppy ratings..."
+    setProgressNotification(status)
+    eventsManager.sendEvent(TraktSyncProgress(status))
+    try {
+      floppyBridgeRatingsRunner.run()
+    } catch (error: Throwable) {
+      rethrowCancellation(error)
+      Timber.w(error, "Trakt <-> Floppy ratings bridge failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyBridgeRatingsSync()")
     }
   }
 

@@ -12,16 +12,19 @@ data class SyncActivity(
   data class Shows(
     val hidden_at: String,
     val watchlisted_at: String,
+    val rated_at: String? = null,
   )
 
   data class Movies(
     val watched_at: String,
     val hidden_at: String,
     val watchlisted_at: String,
+    val rated_at: String? = null,
   )
 
   data class Episodes(
     val watched_at: String,
+    val rated_at: String? = null,
   )
 
   data class Watchlist(

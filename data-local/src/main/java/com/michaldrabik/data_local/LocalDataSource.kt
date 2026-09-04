@@ -2,6 +2,7 @@ package com.michaldrabik.data_local
 
 import com.michaldrabik.data_local.sources.ArchiveMoviesLocalDataSource
 import com.michaldrabik.data_local.sources.ArchiveShowsLocalDataSource
+import com.michaldrabik.data_local.sources.BridgeSyncStatesLocalDataSource
 import com.michaldrabik.data_local.sources.CustomListsItemsLocalDataSource
 import com.michaldrabik.data_local.sources.CustomListsLocalDataSource
 import com.michaldrabik.data_local.sources.DiscoverMoviesLocalDataSource
@@ -50,6 +51,7 @@ import javax.inject.Singleton
 interface LocalDataSource {
   val archiveMovies: ArchiveMoviesLocalDataSource
   val archiveShows: ArchiveShowsLocalDataSource
+  val bridgeSyncStates: BridgeSyncStatesLocalDataSource
   val customLists: CustomListsLocalDataSource
   val customListsItems: CustomListsItemsLocalDataSource
   val discoverMovies: DiscoverMoviesLocalDataSource
@@ -93,6 +95,7 @@ interface LocalDataSource {
 internal class MainLocalDataSource @Inject constructor(
   override val archiveMovies: ArchiveMoviesLocalDataSource,
   override val archiveShows: ArchiveShowsLocalDataSource,
+  override val bridgeSyncStates: BridgeSyncStatesLocalDataSource,
   override val customLists: CustomListsLocalDataSource,
   override val customListsItems: CustomListsItemsLocalDataSource,
   override val discoverMovies: DiscoverMoviesLocalDataSource,
