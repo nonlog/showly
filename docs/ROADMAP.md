@@ -51,10 +51,13 @@
 - [x] Track ownership of Showly-created Planning consumptions and delete only those exact rows on watchlist removal.
 - [x] Fail safe when ownership is missing or a Floppy row was edited: preserve remote user data rather than guessing.
 - [x] Keep Floppy watchlist failures non-fatal to existing Trakt synchronization.
-- [ ] Verify the S3 watchlist slice in fork CI and perform an on-device bootstrap/add/remove test.
-- [ ] Mirror ratings.
-- [ ] Map custom lists where semantics match.
-- [ ] Define initial bootstrap/import behavior for ratings and custom lists.
+- [x] Verify the S3 watchlist slice in fork CI.
+- [ ] Perform an on-device watchlist bootstrap/add/remove test.
+- [ ] Mirror ratings after a safe title-level score contract is defined; current Floppy score mutates a consumption row.
+- [x] Map movie/show custom lists with ownership-aware Floppy list and membership synchronization.
+- [ ] Verify the S3 custom-list slice in fork CI and on-device against an existing/manual Floppy list.
+- [x] Define custom-list bootstrap as create-owned-without-name-adoption, preserving pre-existing Floppy lists/memberships.
+- [ ] Define ratings bootstrap only after a safe rating contract exists.
 
 ## S4 - Bidirectional synchronization
 

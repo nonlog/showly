@@ -79,3 +79,17 @@ When a title leaves Showly's watchlist, Showly deletes only the exact Floppy his
 If the owned row was edited to another status, disappeared, or local ownership state was lost, Showly drops or lacks ownership and preserves the Floppy data. This intentionally prefers a harmless stale planning row over destructive guessing. Changing the configured Floppy base URL or API key clears watchlist ownership together with history checkpoints because the account/instance identity may have changed.
 
 Floppy watchlist synchronization is non-fatal to the Trakt sync worker, matching the S2 history policy.
+
+## S3 custom-list synchronization
+
+Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. Only those owned lists may be renamed, have their description/privacy updated, or be deleted by the bridge. A pre-existing Floppy list with the same name remains independent.
+
+Membership uses the same conservative ownership rule. Showly records a movie/show TMDB membership only when its own PUT actually adds the item. HTTP 409 means the membership already existed, so it is left unowned and Showly will never delete it. When a locally removed item was previously added by Showly, the bridge removes that exact TMDB/list association.
+
+Floppy list membership requires the provider `Item` metadata row to exist, but this does not require creating a tracking consumption. On an initial membership 404, Showly calls Floppy's non-tracking `POST /api/v1/media/{type}/tmdb/{id}/sync/` metadata route and retries the membership PUT. This lets lists contain catalog items without silently changing watch status.
+
+Changing the configured Floppy base URL or API key clears list/list-item ownership together with the watchlist/history state. Missing ownership always fails safe: Showly may leave stale remote data, but it will not guess that an arbitrary remote list or membership belongs to this installation.
+
+## S3 rating boundary
+
+Generic movie/show rating mirroring is intentionally deferred. In the reviewed Floppy contract, `score` is a field on a consumption. The generic media PATCH updates the convenience/default tracked row and POST creates a new consumption, so copying a Trakt title rating through either route can alter watch-history semantics. Until Floppy exposes a safe title-level rating contract, or an explicit mapping policy is adopted, the bridge must not synthesize or rewrite consumptions merely to mirror ratings.

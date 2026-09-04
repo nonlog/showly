@@ -34,6 +34,7 @@ import com.michaldrabik.ui_base.events.TraktSyncProgress
 import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
 import com.michaldrabik.ui_base.floppy.FloppyHistorySyncRunner
+import com.michaldrabik.ui_base.floppy.FloppyListsSyncRunner
 import com.michaldrabik.ui_base.floppy.FloppyWatchlistSyncRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportListsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportRatingsRunner
@@ -71,6 +72,7 @@ class TraktSyncWorker @AssistedInject constructor(
   private val exportRatingsRunner: TraktExportRatingsRunner,
   private val eventsManager: EventsManager,
   private val floppyHistorySyncRunner: FloppyHistorySyncRunner,
+  private val floppyListsSyncRunner: FloppyListsSyncRunner,
   private val floppyWatchlistSyncRunner: FloppyWatchlistSyncRunner,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
@@ -194,6 +196,7 @@ class TraktSyncWorker @AssistedInject constructor(
       if (isImport || isExport) {
         runFloppyHistorySync()
         runFloppyWatchlistSync()
+        runFloppyListsSync()
       }
 
       miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
@@ -315,6 +318,19 @@ class TraktSyncWorker @AssistedInject constructor(
       rethrowCancellation(error)
       Timber.w(error, "Floppy watchlist sync failed. Trakt sync will still complete.")
       Logger.record(error, "TraktSyncWorker::runFloppyWatchlistSync()")
+    }
+  }
+
+  private suspend fun runFloppyListsSync() {
+    val status = "Syncing Floppy custom lists..."
+    setProgressNotification(status)
+    eventsManager.sendEvent(TraktSyncProgress(status))
+    try {
+      floppyListsSyncRunner.run()
+    } catch (error: Throwable) {
+      rethrowCancellation(error)
+      Timber.w(error, "Floppy custom-list sync failed. Trakt sync will still complete.")
+      Logger.record(error, "TraktSyncWorker::runFloppyListsSync()")
     }
   }
 
