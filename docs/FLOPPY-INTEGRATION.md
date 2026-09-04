@@ -82,13 +82,15 @@ Floppy watchlist synchronization is non-fatal to the Trakt sync worker, matching
 
 ## S3 custom-list synchronization
 
-Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. Only those owned lists may be renamed, have their description/privacy updated, or be deleted by the bridge. A pre-existing Floppy list with the same name remains independent.
+Showly mirrors local movie/show custom lists into Floppy without treating same-name remote lists as equivalent. Each Floppy list created by Showly is recorded as a local Showly list id -> Floppy list id ownership mapping. While that local list exists, the bridge may update the owned Floppy list's name, description, and public/private visibility. A pre-existing Floppy list with the same name remains independent.
 
-Membership uses the same conservative ownership rule. Showly records a movie/show TMDB membership only when its own PUT actually adds the item. HTTP 409 means the membership already existed, so it is left unowned and Showly will never delete it. When a locally removed item was previously added by Showly, the bridge removes that exact TMDB/list association.
+S3 list membership is intentionally additive-only. Current Showly movie/show items are added by TMDB identity; HTTP 409 simply means the membership already exists. Local member removal is not propagated to Floppy in S3. Local list deletion also does not delete the remote Floppy list: Showly only releases its local ownership mapping and leaves the remote list intact. This avoids deleting user edits or memberships that may have been added in Floppy after the mirror list was created.
+
+This conservative rule is required by the current Floppy contract. The exposed `list_item_id` is a sequential list position and is renumbered after deletions, so it is not an immutable ownership token. Without a stable relation identity or conflict/tombstone policy, destructive reconciliation cannot distinguish an original Showly-created relation from later user edits. Deletions are therefore deferred to S4, where conflict and tombstone semantics are explicitly planned.
 
 Floppy list membership requires the provider `Item` metadata row to exist, but this does not require creating a tracking consumption. On an initial membership 404, Showly calls Floppy's non-tracking `POST /api/v1/media/{type}/tmdb/{id}/sync/` metadata route and retries the membership PUT. This lets lists contain catalog items without silently changing watch status.
 
-Changing the configured Floppy base URL or API key clears list/list-item ownership together with the watchlist/history state. Missing ownership always fails safe: Showly may leave stale remote data, but it will not guess that an arbitrary remote list or membership belongs to this installation.
+Changing the configured Floppy base URL or API key clears list ownership together with the watchlist/history state. Missing ownership always fails safe: Showly may leave stale or duplicate remote lists after reinstall/account changes, but it will not guess that an arbitrary remote list belongs to this installation.
 
 ## S3 rating boundary
 

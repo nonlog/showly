@@ -45,19 +45,14 @@ class FloppyListsSyncRunner @Inject constructor(
         .mapNotNull { resolveListItem(it) }
         .toSet()
       currentItems.forEach { item ->
-        if (floppyListsSource.ensureOwnedListItem(list.id, item)) changes += 1
-      }
-
-      val removedItems = floppyListsSource.getOwnedListItems(list.id) - currentItems
-      removedItems.forEach { item ->
-        if (floppyListsSource.removeOwnedListItem(list.id, item)) changes += 1
+        if (floppyListsSource.ensureListItem(list.id, item)) changes += 1
       }
     }
 
     val localListIds = localLists.map { it.id }.toSet()
     val removedListIds = floppyListsSource.getOwnedLocalListIds() - localListIds
     removedListIds.forEach { localListId ->
-      if (floppyListsSource.removeOwnedList(localListId)) changes += 1
+      if (floppyListsSource.releaseOwnedList(localListId)) changes += 1
     }
 
     Timber.d("Floppy custom-list sync completed with $changes change(s)")

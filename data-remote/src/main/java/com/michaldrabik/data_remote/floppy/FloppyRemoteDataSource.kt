@@ -167,7 +167,6 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
           remove(KEY_WATCHLIST_MOVIES)
           remove(KEY_WATCHLIST_SHOWS)
           remove(KEY_FLOPPY_LISTS_OWNERSHIP)
-          remove(KEY_FLOPPY_LIST_ITEMS_OWNERSHIP)
         }
       }.apply()
   }

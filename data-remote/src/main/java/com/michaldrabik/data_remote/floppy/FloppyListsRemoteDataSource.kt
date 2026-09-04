@@ -19,7 +19,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 internal const val KEY_FLOPPY_LISTS_OWNERSHIP = "FLOPPY_LISTS_OWNERSHIP"
-internal const val KEY_FLOPPY_LIST_ITEMS_OWNERSHIP = "FLOPPY_LIST_ITEMS_OWNERSHIP"
 
 internal data class FloppyListRequest(
   val name: String,
@@ -51,16 +50,9 @@ interface FloppyListsRemoteDataSource {
     isPublic: Boolean,
   ): Boolean
 
-  suspend fun removeOwnedList(localListId: Long): Boolean
+  fun releaseOwnedList(localListId: Long): Boolean
 
-  fun getOwnedListItems(localListId: Long): Set<FloppyListItemRef>
-
-  suspend fun ensureOwnedListItem(
-    localListId: Long,
-    item: FloppyListItemRef,
-  ): Boolean
-
-  suspend fun removeOwnedListItem(
+  suspend fun ensureListItem(
     localListId: Long,
     item: FloppyListItemRef,
   ): Boolean
@@ -127,35 +119,14 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
     return true
   }
 
-  override suspend fun removeOwnedList(localListId: Long): Boolean {
-    val remoteListId = getListOwnership()[localListId] ?: return false
-    val (config, baseUrl) = getSyncConfig()
-    val response = executeRequest(
-      authenticatedRequestBuilder("$baseUrl/api/v1/lists/$remoteListId/", config.apiKey)
-        .delete()
-        .build(),
-    )
-    return when (response.code) {
-      204 -> {
-        clearListOwnership(localListId)
-        true
-      }
-      404 -> {
-        clearListOwnership(localListId)
-        false
-      }
-      else -> throw IOException("Floppy list deletion failed with HTTP " + response.code)
-    }
+  override fun releaseOwnedList(localListId: Long): Boolean {
+    val ownership = getListOwnership().toMutableMap()
+    val removed = ownership.remove(localListId) != null
+    if (removed) saveListOwnership(ownership)
+    return removed
   }
 
-  override fun getOwnedListItems(localListId: Long): Set<FloppyListItemRef> =
-    getListItemOwnership()
-      .filterKeys { it.first == localListId }
-      .keys
-      .map { (_, item) -> item }
-      .toSet()
-
-  override suspend fun ensureOwnedListItem(
+  override suspend fun ensureListItem(
     localListId: Long,
     item: FloppyListItemRef,
   ): Boolean {
@@ -163,6 +134,7 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
     val remoteListId = getListOwnership()[localListId]
       ?: throw IOException("Floppy list ownership is missing for local list $localListId")
     val (config, baseUrl) = getSyncConfig()
+
     var response = putListItem(baseUrl, config.apiKey, remoteListId, item)
     if (response.code == 404) {
       val syncResponse = executeRequest(
@@ -178,43 +150,9 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
     }
 
     return when (response.code) {
-      in 200..299 -> {
-        setListItemOwnership(localListId, item)
-        true
-      }
+      in 200..299 -> true
       409 -> false
       else -> throw IOException("Floppy list item addition failed with HTTP " + response.code)
-    }
-  }
-
-  override suspend fun removeOwnedListItem(
-    localListId: Long,
-    item: FloppyListItemRef,
-  ): Boolean {
-    val ownershipKey = localListId to item
-    if (!getListItemOwnership().containsKey(ownershipKey)) return false
-    val remoteListId = getListOwnership()[localListId]
-    if (remoteListId == null) {
-      clearListItemOwnership(localListId, item)
-      return false
-    }
-    val (config, baseUrl) = getSyncConfig()
-    val response = executeRequest(
-      authenticatedRequestBuilder(
-        "$baseUrl/api/v1/media/${item.type.mediaTypePath()}/tmdb/${item.tmdbId}/lists/$remoteListId/",
-        config.apiKey,
-      ).delete().build(),
-    )
-    return when (response.code) {
-      204 -> {
-        clearListItemOwnership(localListId, item)
-        true
-      }
-      404 -> {
-        clearListItemOwnership(localListId, item)
-        false
-      }
-      else -> throw IOException("Floppy list item removal failed with HTTP " + response.code)
     }
   }
 
@@ -259,7 +197,6 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
   private fun clearListOwnership(localListId: Long) {
     val ownership = getListOwnership().toMutableMap()
     if (ownership.remove(localListId) != null) saveListOwnership(ownership)
-    clearListItemOwnership(localListId)
   }
 
   private fun saveListOwnership(ownership: Map<Long, Long>) {
@@ -267,40 +204,6 @@ internal class DefaultFloppyListsRemoteDataSource @Inject constructor(
       .map { (localListId, remoteListId) -> encodeFloppyListOwnership(localListId, remoteListId) }
       .toSet()
     preferences.edit().putStringSet(KEY_FLOPPY_LISTS_OWNERSHIP, encoded).apply()
-  }
-
-  private fun getListItemOwnership(): Map<Pair<Long, FloppyListItemRef>, Unit> =
-    preferences
-      .getStringSet(KEY_FLOPPY_LIST_ITEMS_OWNERSHIP, emptySet())
-      .orEmpty()
-      .mapNotNull(::decodeFloppyListItemOwnership)
-      .associateWith { Unit }
-
-  private fun setListItemOwnership(
-    localListId: Long,
-    item: FloppyListItemRef,
-  ) {
-    val ownership = getListItemOwnership().keys.toMutableSet()
-    ownership += localListId to item
-    saveListItemOwnership(ownership)
-  }
-
-  private fun clearListItemOwnership(
-    localListId: Long,
-    item: FloppyListItemRef? = null,
-  ) {
-    val ownership = getListItemOwnership().keys.toMutableSet()
-    val changed = ownership.removeAll { (ownedLocalListId, ownedItem) ->
-      ownedLocalListId == localListId && (item == null || ownedItem == item)
-    }
-    if (changed) saveListItemOwnership(ownership)
-  }
-
-  private fun saveListItemOwnership(ownership: Set<Pair<Long, FloppyListItemRef>>) {
-    val encoded = ownership
-      .map { (localListId, item) -> encodeFloppyListItemOwnership(localListId, item) }
-      .toSet()
-    preferences.edit().putStringSet(KEY_FLOPPY_LIST_ITEMS_OWNERSHIP, encoded).apply()
   }
 
   private fun getSyncConfig(): Pair<FloppyConfig, String> {
@@ -366,28 +269,3 @@ internal fun decodeFloppyListOwnership(value: String): Pair<Long, Long>? {
   if (localListId <= 0 || remoteListId <= 0) return null
   return localListId to remoteListId
 }
-
-internal fun encodeFloppyListItemOwnership(
-  localListId: Long,
-  item: FloppyListItemRef,
-): String = "$localListId:${item.type.ownershipCode()}:${item.tmdbId}"
-
-internal fun decodeFloppyListItemOwnership(value: String): Pair<Long, FloppyListItemRef>? {
-  val parts = value.split(':', limit = 3)
-  if (parts.size != 3) return null
-  val localListId = parts[0].toLongOrNull() ?: return null
-  val type = when (parts[1]) {
-    "m" -> FloppyWatchlistType.MOVIES
-    "s" -> FloppyWatchlistType.SHOWS
-    else -> return null
-  }
-  val tmdbId = parts[2].toLongOrNull() ?: return null
-  if (localListId <= 0 || tmdbId <= 0) return null
-  return localListId to FloppyListItemRef(type, tmdbId)
-}
-
-private fun FloppyWatchlistType.ownershipCode() =
-  when (this) {
-    FloppyWatchlistType.MOVIES -> "m"
-    FloppyWatchlistType.SHOWS -> "s"
-  }
