@@ -68,7 +68,8 @@ class ListDetailsCompactItemView : ListDetailsItemView {
         requireShow().year.takeIf { it > 0 }?.toString(),
       ).joinToString(" · ")
     } else {
-      requireMovie().year
+      requireMovie()
+        .year
         .takeIf { it > 0 }
         ?.toString()
         .orEmpty()

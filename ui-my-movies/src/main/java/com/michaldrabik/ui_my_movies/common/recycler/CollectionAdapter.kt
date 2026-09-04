@@ -87,9 +87,9 @@ class CollectionAdapter(
             item = item,
             title = item.displayTitle(),
             subtitle = item.movie.year
-            .takeIf { it > 0 }
-            ?.toString()
-            .orEmpty(),
+              .takeIf { it > 0 }
+              ?.toString()
+              .orEmpty(),
             translationMissing = item.translation == null,
           )
         }
