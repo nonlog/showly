@@ -161,7 +161,12 @@
   <string name="textRuntimeCredentialsTitle">API credentials</string>
   <string name="textRuntimeCredentialsSummaryRepository">Repository defaults</string>
   <string name="textRuntimeCredentialsSummaryCustom">Custom overrides active</string>
-  <string name="textRuntimeCredentialsDescription">Override credentials on this device. Leave fields empty to use the values embedded by the repository build.</string>
+  <string name="textRuntimeCredentialsDescription">Use the credentials bundled with this build, or override them only on this device.</string>
+  <string name="textRuntimeCredentialsTraktSection">Trakt</string>
+  <string name="textRuntimeCredentialsTraktSectionSummary">OAuth credentials used for Trakt sign-in and sync. Changing them signs you out so the new client can authorize cleanly.</string>
+  <string name="textRuntimeCredentialsTmdbSection">TMDB</string>
+  <string name="textRuntimeCredentialsTmdbSectionSummary">Read Access Token used for metadata and artwork requests.</string>
+  <string name="textRuntimeCredentialsSecurityNote">Overrides stay in Showly's private app storage. Empty fields continue to use the credentials bundled by the repository build.</string>
   <string name="textRuntimeCredentialsTraktClientId">Trakt Client ID</string>
   <string name="textRuntimeCredentialsTraktClientSecret">Trakt Client Secret</string>
   <string name="textRuntimeCredentialsTmdbToken">TMDB Read Access Token</string>

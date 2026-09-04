@@ -6,7 +6,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.net.toUri
 import androidx.fragment.app.viewModels
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.michaldrabik.common.Config
 import com.michaldrabik.ui_base.BaseFragment
 import com.michaldrabik.ui_base.utilities.events.MessageEvent
@@ -79,27 +80,42 @@ class SettingsMiscFragment : BaseFragment<SettingsMiscViewModel>(R.layout.fragme
       runtimeCredentialsTraktClientSecret.setText(overrides.traktClientSecret.orEmpty())
       runtimeCredentialsTmdbToken.setText(overrides.tmdbReadAccessToken.orEmpty())
     }
+    val dialog = BottomSheetDialog(requireContext(), R.style.CustomBottomSheetDialog).apply {
+      setContentView(dialogBinding.root)
+      behavior.state = BottomSheetBehavior.STATE_EXPANDED
+      behavior.skipCollapsed = true
+    }
 
-    MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialog)
-      .setTitle(R.string.textRuntimeCredentialsTitle)
-      .setMessage(R.string.textRuntimeCredentialsDescription)
-      .setView(dialogBinding.root)
-      .setPositiveButton(R.string.textRuntimeCredentialsSave) { _, _ ->
-        viewModel.saveRuntimeCredentials(
-          traktClientId = dialogBinding.runtimeCredentialsTraktClientId.text
-            ?.toString()
-            .orEmpty(),
-          traktClientSecret = dialogBinding.runtimeCredentialsTraktClientSecret.text
-            ?.toString()
-            .orEmpty(),
-          tmdbReadAccessToken = dialogBinding.runtimeCredentialsTmdbToken.text
-            ?.toString()
-            .orEmpty(),
-        )
-      }.setNeutralButton(R.string.textRuntimeCredentialsRestore) { _, _ ->
-        viewModel.restoreRuntimeCredentials()
-      }.setNegativeButton(R.string.textCancel) { _, _ -> }
-      .show()
+    dialogBinding.runtimeCredentialsClose.onClick { dialog.dismiss() }
+    dialogBinding.runtimeCredentialsSave.onClick {
+      val clientId = dialogBinding.runtimeCredentialsTraktClientId.text
+        ?.toString()
+        .orEmpty()
+      val clientSecret = dialogBinding.runtimeCredentialsTraktClientSecret.text
+        ?.toString()
+        .orEmpty()
+      val tmdbToken = dialogBinding.runtimeCredentialsTmdbToken.text
+        ?.toString()
+        .orEmpty()
+      val traktPairInvalid = clientId.isBlank() != clientSecret.isBlank()
+      dialogBinding.runtimeCredentialsTraktClientIdLayout.error =
+        getString(R.string.textRuntimeCredentialsTraktPairRequired).takeIf { traktPairInvalid }
+      dialogBinding.runtimeCredentialsTraktClientSecretLayout.error =
+        getString(R.string.textRuntimeCredentialsTraktPairRequired).takeIf { traktPairInvalid }
+      if (traktPairInvalid) return@onClick
+
+      viewModel.saveRuntimeCredentials(
+        traktClientId = clientId,
+        traktClientSecret = clientSecret,
+        tmdbReadAccessToken = tmdbToken,
+      )
+      dialog.dismiss()
+    }
+    dialogBinding.runtimeCredentialsRestore.onClick {
+      viewModel.restoreRuntimeCredentials()
+      dialog.dismiss()
+    }
+    dialog.show()
   }
 
   private fun openWebLink(url: String) {
