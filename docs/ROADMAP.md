@@ -73,7 +73,8 @@
 - [x] Verify the Custom Lists latest-wins/tombstone migration in Fork CI #37.
 - [x] Migrate custom-list identity, presence, metadata, and movie/show membership to the same latest-wins/tombstone model.
 - [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy.
-- [ ] Add explicit manual/background bridge-sync UX and a user-visible conflict/status summary.
+- [x] Add an explicit manual `Trakt ↔ Floppy` sync action and persist last-attempt/last-success/change-count/failed-domain status for the settings UI.
+- [ ] Add per-domain pending/conflict detail beyond the current last-run summary.
 - [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes.
 
 ## S5 - Additional user data

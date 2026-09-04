@@ -24,6 +24,7 @@ import androidx.work.workDataOf
 import com.michaldrabik.common.errors.ErrorHelper
 import com.michaldrabik.common.errors.ShowlyError
 import com.michaldrabik.common.extensions.nowUtcMillis
+import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.repository.UserTraktManager
 import com.michaldrabik.ui_base.Logger
 import com.michaldrabik.ui_base.R
@@ -76,6 +77,7 @@ class TraktSyncWorker @AssistedInject constructor(
   private val floppyBridgeListsRunner: FloppyBridgeListsRunner,
   private val floppyBridgeRatingsRunner: FloppyBridgeRatingsRunner,
   private val floppyBridgeWatchlistRunner: FloppyBridgeWatchlistRunner,
+  private val floppyRemoteDataSource: FloppyRemoteDataSource,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
@@ -93,6 +95,10 @@ class TraktSyncWorker @AssistedInject constructor(
     const val SYNC_NOTIFICATION_COMPLETE_ERROR_WATCHLIST_ID = 833
 
     const val KEY_LAST_SYNC_TIMESTAMP = "KEY_LAST_SYNC_TIMESTAMP"
+    const val KEY_LAST_FLOPPY_BRIDGE_ATTEMPT = "KEY_LAST_FLOPPY_BRIDGE_ATTEMPT"
+    const val KEY_LAST_FLOPPY_BRIDGE_SUCCESS = "KEY_LAST_FLOPPY_BRIDGE_SUCCESS"
+    const val KEY_LAST_FLOPPY_BRIDGE_CHANGES = "KEY_LAST_FLOPPY_BRIDGE_CHANGES"
+    const val KEY_LAST_FLOPPY_BRIDGE_FAILURES = "KEY_LAST_FLOPPY_BRIDGE_FAILURES"
     private const val ARG_IS_IMPORT = "ARG_IS_IMPORT"
     private const val ARG_IS_EXPORT = "ARG_IS_EXPORT"
     private const val ARG_IS_SILENT = "ARG_IS_SILENT"
@@ -180,13 +186,17 @@ class TraktSyncWorker @AssistedInject constructor(
     val isExport = inputData.getBoolean(ARG_IS_EXPORT, false)
     val isSilent = inputData.getBoolean(ARG_IS_SILENT, false)
 
+    val bridgeEnabled = (isImport || isExport) && floppyRemoteDataSource.getConfig().enabled
+    val bridgeResults = linkedMapOf<String, Int?>()
+    if (bridgeEnabled) markFloppyBridgeAttempt()
+
     try {
       eventsManager.sendEvent(TraktSyncStart)
 
       if (isImport || isExport) {
         // Run list reconciliation before the mature Trakt list import/export path so
         // a remote deletion is observed before the legacy exporter can recreate it.
-        runFloppyBridgeListsSync()
+        bridgeResults["lists-pre"] = runFloppyBridgeListsSync()
       }
       if (isImport) {
         runImportWatched()
@@ -201,14 +211,15 @@ class TraktSyncWorker @AssistedInject constructor(
         runExportRatings()
       }
       if (isImport || isExport) {
-        runFloppyBridgeHistorySync()
-        runFloppyBridgeWatchlistSync()
-        runFloppyBridgeRatingsSync()
+        bridgeResults["history"] = runFloppyBridgeHistorySync()
+        bridgeResults["watchlist"] = runFloppyBridgeWatchlistSync()
+        bridgeResults["ratings"] = runFloppyBridgeRatingsSync()
         // Run lists again after the local<->Trakt path so local edits that were
         // exported during this worker are propagated to Floppy in the same sync.
-        runFloppyBridgeListsSync()
+        bridgeResults["lists"] = runFloppyBridgeListsSync()
       }
 
+      if (bridgeEnabled) markFloppyBridgeResult(bridgeResults)
       miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
 
       eventsManager.sendEvent(TraktSyncSuccess)
@@ -220,6 +231,7 @@ class TraktSyncWorker @AssistedInject constructor(
       }
       return Result.success()
     } catch (error: Throwable) {
+      if (bridgeEnabled) markFloppyBridgeFailure("trakt-sync")
       handleError(error, isSilent)
       return Result.failure()
     } finally {
@@ -305,56 +317,90 @@ class TraktSyncWorker @AssistedInject constructor(
     }
   }
 
-  private suspend fun runFloppyBridgeHistorySync() {
+  private suspend fun runFloppyBridgeHistorySync(): Int? {
     val status = "Reconciling Trakt ↔ Floppy history..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
-    try {
+    return try {
       floppyBridgeHistoryRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
       Timber.w(error, "Trakt <-> Floppy history bridge failed. Trakt sync will still complete.")
       Logger.record(error, "TraktSyncWorker::runFloppyBridgeHistorySync()")
+      null
     }
   }
 
-  private suspend fun runFloppyBridgeWatchlistSync() {
+  private suspend fun runFloppyBridgeWatchlistSync(): Int? {
     val status = "Reconciling Trakt ↔ Floppy watchlist..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
-    try {
+    return try {
       floppyBridgeWatchlistRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
       Timber.w(error, "Trakt <-> Floppy watchlist bridge failed. Trakt sync will still complete.")
       Logger.record(error, "TraktSyncWorker::runFloppyBridgeWatchlistSync()")
+      null
     }
   }
 
-  private suspend fun runFloppyBridgeRatingsSync() {
+  private suspend fun runFloppyBridgeRatingsSync(): Int? {
     val status = "Reconciling Trakt ↔ Floppy ratings..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
-    try {
+    return try {
       floppyBridgeRatingsRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
       Timber.w(error, "Trakt <-> Floppy ratings bridge failed. Trakt sync will still complete.")
       Logger.record(error, "TraktSyncWorker::runFloppyBridgeRatingsSync()")
+      null
     }
   }
 
-  private suspend fun runFloppyBridgeListsSync() {
+  private suspend fun runFloppyBridgeListsSync(): Int? {
     val status = "Reconciling Trakt ↔ Floppy custom lists..."
     setProgressNotification(status)
     eventsManager.sendEvent(TraktSyncProgress(status))
-    try {
+    return try {
       floppyBridgeListsRunner.run()
     } catch (error: Throwable) {
       rethrowCancellation(error)
       Timber.w(error, "Trakt <-> Floppy custom-list bridge failed. Trakt sync will still complete.")
       Logger.record(error, "TraktSyncWorker::runFloppyBridgeListsSync()")
+      null
     }
+  }
+
+  private fun markFloppyBridgeAttempt() {
+    miscPreferences
+      .edit()
+      .putLong(KEY_LAST_FLOPPY_BRIDGE_ATTEMPT, nowUtcMillis())
+      .remove(KEY_LAST_FLOPPY_BRIDGE_FAILURES)
+      .apply()
+  }
+
+  private fun markFloppyBridgeResult(results: Map<String, Int?>) {
+    val failed = results.filterValues { it == null }.keys
+    if (failed.isNotEmpty()) {
+      markFloppyBridgeFailure(failed.joinToString(","))
+      return
+    }
+    val changes = results.values.filterNotNull().sum()
+    miscPreferences
+      .edit()
+      .putLong(KEY_LAST_FLOPPY_BRIDGE_SUCCESS, nowUtcMillis())
+      .putInt(KEY_LAST_FLOPPY_BRIDGE_CHANGES, changes)
+      .remove(KEY_LAST_FLOPPY_BRIDGE_FAILURES)
+      .apply()
+  }
+
+  private fun markFloppyBridgeFailure(domains: String) {
+    miscPreferences
+      .edit()
+      .putString(KEY_LAST_FLOPPY_BRIDGE_FAILURES, domains)
+      .apply()
   }
 
   private fun setProgressNotification(content: String?) {

@@ -121,7 +121,7 @@
   <androidx.constraintlayout.widget.ConstraintLayout
     android:id="@+id/settingsFloppyTest"
     style="@style/Settings.ItemLayout"
-    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintBottom_toTopOf="@id/settingsFloppySync"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toBottomOf="@id/settingsFloppyApiKeyLayout"
@@ -159,6 +159,52 @@
       app:layout_constraintBottom_toBottomOf="@id/settingsFloppyTest"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintTop_toTopOf="@id/settingsFloppyTest"
+      tools:visibility="visible"
+      />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/settingsFloppySync"
+    style="@style/Settings.ItemLayout"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/settingsFloppyTest"
+    >
+
+    <TextView
+      android:id="@+id/settingsFloppySyncTitle"
+      style="@style/Settings.Title"
+      android:text="@string/textSettingsFloppyBridgeSyncTitle"
+      app:layout_constraintBottom_toTopOf="@id/settingsFloppySyncSummary"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintVertical_chainStyle="packed"
+      />
+
+    <TextView
+      android:id="@+id/settingsFloppySyncSummary"
+      style="@style/Settings.Summary"
+      android:layout_marginEnd="@dimen/spaceSmall"
+      app:layout_constrainedWidth="true"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintEnd_toStartOf="@id/settingsFloppySyncProgress"
+      app:layout_constraintHorizontal_bias="0"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/settingsFloppySyncTitle"
+      tools:text="Never synced"
+      />
+
+    <ProgressBar
+      android:id="@+id/settingsFloppySyncProgress"
+      style="@style/ProgressBar.Accent"
+      android:layout_width="24dp"
+      android:layout_height="24dp"
+      android:visibility="gone"
+      app:layout_constraintBottom_toBottomOf="@id/settingsFloppySync"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="@id/settingsFloppySync"
       tools:visibility="visible"
       />
 

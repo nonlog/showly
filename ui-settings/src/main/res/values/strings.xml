@@ -8,8 +8,8 @@
   <string name="textSettings">Settings</string>
   <string name="textSettingsTrakt">Trakt.tv</string>
   <string name="textSettingsFloppy">Floppy</string>
-  <string name="textSettingsFloppyEnabledTitle">Floppy Tracking</string>
-  <string name="textSettingsFloppyEnabledSummary">Connect Showly to a self-hosted Floppy account without disabling Trakt.tv.</string>
+  <string name="textSettingsFloppyEnabledTitle">Trakt ↔ Floppy Bridge</string>
+  <string name="textSettingsFloppyEnabledSummary">Keep shared Trakt.tv and Floppy data synchronized through Showly. Newer changes win.</string>
   <string name="textSettingsFloppyBaseUrlTitle">Server URL</string>
   <string name="textSettingsFloppyBaseUrlSummary">Base URL of your Floppy instance, for example https://tracker.example.com</string>
   <string name="textSettingsFloppyApiKeyTitle">API Key</string>
@@ -21,6 +21,12 @@
   <string name="textSettingsFloppyStatusUnauthorized">Unauthorized. Check the API key.</string>
   <string name="textSettingsFloppyStatusUnreachable">Unreachable. Check the server URL and network.</string>
   <string name="textSettingsFloppyStatusInvalidConfiguration">Invalid server URL.</string>
+  <string name="textSettingsFloppyBridgeSyncTitle">Sync Trakt ↔ Floppy now</string>
+  <string name="textSettingsFloppyBridgeNever">Ready. No bridge sync has completed yet.</string>
+  <string name="textSettingsFloppyBridgeLastSuccess">Last bridge sync: %1$s · %2$d reconciled changes</string>
+  <string name="textSettingsFloppyBridgeFailed">The last bridge run was incomplete. It will retry divergent data on the next sync.</string>
+  <string name="textSettingsFloppyBridgeTraktRequired">Sign in to Trakt.tv before running the bridge.</string>
+  <string name="textSettingsFloppyBridgeConnectionRequired">Save and test the Floppy connection before running the bridge.</string>
   <string name="textSettingsTraktAuthorizeTitle">Trakt.tv Authorization</string>
   <string name="textSettingsTraktAuthorizeSummarySignIn">Click to sign in into your Trakt.tv account.</string>
   <string name="textSettingsTraktAuthorizeSummarySignOut">Signed in. Click to sign out.</string>

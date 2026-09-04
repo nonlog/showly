@@ -96,6 +96,10 @@ Trakt exposes a title-level integer rating from 1 to 10. Floppy stores score on 
 
 Bridge execution remains non-fatal to Showly's mature Trakt worker. However, the ledger is updated only for writes that actually completed (or are already satisfied). A mapping/network failure therefore remains visible as divergent state and is retried on the next bridge run.
 
+### Bridge run status
+
+Showly records bridge status independently from the overall Trakt worker result. When Floppy is enabled, a bridge run stores its attempt timestamp, last fully successful timestamp, total reconciliation-change count, and any failed domains. A domain failure remains non-fatal to the mature Trakt sync but is visible in Floppy settings as an incomplete bridge run. The settings page also exposes a manual `Sync Trakt ↔ Floppy now` action only when Trakt is authorized and the Floppy connection is currently healthy.
+
 ## Custom lists
 
 Custom lists now use the same bridge ledger rather than the old additive-only ownership rule.
