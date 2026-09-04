@@ -60,7 +60,7 @@ class FloppyBridgeHistoryRunner @Inject constructor(
         addAll(floppyBridgeSource.fetchHistoryEvents(identity))
       }
     }
-    val floppyByKey = floppyEvents.associateBy(FloppyBridgeHistoryEvent::key)
+    val floppyByKey = floppyEvents.associateBy { it.key }
     val previous = bridgeStateRepository.getAll(DOMAIN).associateBy(BridgeSyncState::entityKey)
     val allKeys = buildSet {
       addAll(traktByKey.keys)
@@ -270,9 +270,10 @@ class FloppyBridgeHistoryRunner @Inject constructor(
       return TraktHistoryEvent(identity, traktId, watchedAt)
     }
     val showTmdbId = show?.ids?.tmdb ?: return null
-    val episodeTraktId = episode?.ids?.trakt ?: return null
-    val season = episode.season ?: return null
-    val number = episode.number ?: return null
+    val episodeValue = episode ?: return null
+    val episodeTraktId = episodeValue.ids?.trakt ?: return null
+    val season = episodeValue.season ?: return null
+    val number = episodeValue.number ?: return null
     return TraktHistoryEvent(
       identity = FloppyBridgeHistoryIdentity(FloppyBridgeHistoryKind.EPISODE, showTmdbId, season, number),
       traktItemId = episodeTraktId,
