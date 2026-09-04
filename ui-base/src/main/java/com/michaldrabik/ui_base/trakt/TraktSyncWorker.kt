@@ -185,64 +185,65 @@ class TraktSyncWorker @AssistedInject constructor(
     }
   }
 
-  override suspend fun doWork(): Result = SYNC_MUTEX.withLock {
-    val isImport = inputData.getBoolean(ARG_IS_IMPORT, false)
-    val isExport = inputData.getBoolean(ARG_IS_EXPORT, false)
-    val isSilent = inputData.getBoolean(ARG_IS_SILENT, false)
+  override suspend fun doWork(): Result =
+    SYNC_MUTEX.withLock {
+      val isImport = inputData.getBoolean(ARG_IS_IMPORT, false)
+      val isExport = inputData.getBoolean(ARG_IS_EXPORT, false)
+      val isSilent = inputData.getBoolean(ARG_IS_SILENT, false)
 
-    val bridgeEnabled = (isImport || isExport) && floppyRemoteDataSource.getConfig().enabled
-    val bridgeResults = linkedMapOf<String, Int?>()
-    if (bridgeEnabled) markFloppyBridgeAttempt()
+      val bridgeEnabled = (isImport || isExport) && floppyRemoteDataSource.getConfig().enabled
+      val bridgeResults = linkedMapOf<String, Int?>()
+      if (bridgeEnabled) markFloppyBridgeAttempt()
 
-    try {
-      eventsManager.sendEvent(TraktSyncStart)
+      try {
+        eventsManager.sendEvent(TraktSyncStart)
 
-      if (isImport || isExport) {
-        // Run list reconciliation before the mature Trakt list import/export path so
-        // a remote deletion is observed before the legacy exporter can recreate it.
-        bridgeResults["lists-pre"] = runFloppyBridgeListsSync()
-      }
-      if (isImport) {
-        runImportWatched()
-        runImportWatchlist()
-        runImportLists()
-        runImportRatings()
-      }
-      if (isExport) {
-        runExportWatched()
-        runExportWatchlist()
-        runExportLists()
-        runExportRatings()
-      }
-      if (isImport || isExport) {
-        bridgeResults["history"] = runFloppyBridgeHistorySync()
-        bridgeResults["watchlist"] = runFloppyBridgeWatchlistSync()
-        bridgeResults["ratings"] = runFloppyBridgeRatingsSync()
-        // Run lists again after the local<->Trakt path so local edits that were
-        // exported during this worker are propagated to Floppy in the same sync.
-        bridgeResults["lists"] = runFloppyBridgeListsSync()
-      }
+        if (isImport || isExport) {
+          // Run list reconciliation before the mature Trakt list import/export path so
+          // a remote deletion is observed before the legacy exporter can recreate it.
+          bridgeResults["lists-pre"] = runFloppyBridgeListsSync()
+        }
+        if (isImport) {
+          runImportWatched()
+          runImportWatchlist()
+          runImportLists()
+          runImportRatings()
+        }
+        if (isExport) {
+          runExportWatched()
+          runExportWatchlist()
+          runExportLists()
+          runExportRatings()
+        }
+        if (isImport || isExport) {
+          bridgeResults["history"] = runFloppyBridgeHistorySync()
+          bridgeResults["watchlist"] = runFloppyBridgeWatchlistSync()
+          bridgeResults["ratings"] = runFloppyBridgeRatingsSync()
+          // Run lists again after the local<->Trakt path so local edits that were
+          // exported during this worker are propagated to Floppy in the same sync.
+          bridgeResults["lists"] = runFloppyBridgeListsSync()
+        }
 
-      if (bridgeEnabled) markFloppyBridgeResult(bridgeResults)
-      miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
+        if (bridgeEnabled) markFloppyBridgeResult(bridgeResults)
+        miscPreferences.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, nowUtcMillis()).apply()
 
-      eventsManager.sendEvent(TraktSyncSuccess)
-      if (!isSilent) {
-        notificationManager().notify(
-          SYNC_NOTIFICATION_COMPLETE_SUCCESS_ID,
-          createSuccessNotification(),
-        )
+        eventsManager.sendEvent(TraktSyncSuccess)
+        if (!isSilent) {
+          notificationManager().notify(
+            SYNC_NOTIFICATION_COMPLETE_SUCCESS_ID,
+            createSuccessNotification(),
+          )
+        }
+        return@withLock Result.success()
+      } catch (error: Throwable) {
+        if (bridgeEnabled) markFloppyBridgeFailure("trakt-sync")
+        handleError(error, isSilent)
+        return@withLock Result.failure()
+      } finally {
+        clearRunners()
+        notificationManager().cancel(SYNC_NOTIFICATION_COMPLETE_PROGRESS_ID)
       }
-      return@withLock Result.success()
-    } catch (error: Throwable) {
-      if (bridgeEnabled) markFloppyBridgeFailure("trakt-sync")
-      handleError(error, isSilent)
-      return@withLock Result.failure()
-    } finally {
-      clearRunners()
-      notificationManager().cancel(SYNC_NOTIFICATION_COMPLETE_PROGRESS_ID)
     }
-  }
 
   override suspend fun getForegroundInfo(): ForegroundInfo {
     val notification = createProgressNotification(null)
