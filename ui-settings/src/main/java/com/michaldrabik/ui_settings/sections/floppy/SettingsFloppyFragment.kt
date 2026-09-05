@@ -12,6 +12,7 @@ import com.michaldrabik.data_remote.floppy.FloppyConnectionStatus.NOT_TESTED
 import com.michaldrabik.data_remote.floppy.FloppyConnectionStatus.UNAUTHORIZED
 import com.michaldrabik.data_remote.floppy.FloppyConnectionStatus.UNREACHABLE
 import com.michaldrabik.ui_base.BaseFragment
+import com.michaldrabik.ui_base.floppy.FloppyBridgeRetryWorker
 import com.michaldrabik.ui_base.trakt.TraktSyncWorker
 import com.michaldrabik.ui_base.utilities.extensions.launchAndRepeatStarted
 import com.michaldrabik.ui_base.utilities.extensions.onClick
@@ -58,13 +59,18 @@ class SettingsFloppyFragment : BaseFragment<SettingsFloppyViewModel>(R.layout.fr
   }
 
   private fun setupWorkManager() {
-    WorkManager
-      .getInstance(requireAppContext())
+    val workManager = WorkManager.getInstance(requireAppContext())
+    workManager
       .getWorkInfosByTagLiveData(TraktSyncWorker.TAG_ID)
       .observe(viewLifecycleOwner) { work ->
         val isRunning = work.any { it.state == State.RUNNING }
         binding.settingsFloppySyncProgress.visibleIf(isRunning)
         if (!isRunning) viewModel.refreshBridgeStatus()
+      }
+    workManager
+      .getWorkInfosByTagLiveData(FloppyBridgeRetryWorker.TAG_ID)
+      .observe(viewLifecycleOwner) { work ->
+        if (work.none { it.state == State.RUNNING }) viewModel.refreshBridgeStatus()
       }
   }
 
@@ -102,6 +108,10 @@ class SettingsFloppyFragment : BaseFragment<SettingsFloppyViewModel>(R.layout.fr
       settingsFloppySyncSummary.text = when {
         !uiState.isTraktAuthorized -> getString(R.string.textSettingsFloppyBridgeTraktRequired)
         uiState.status != CONNECTED -> getString(R.string.textSettingsFloppyBridgeConnectionRequired)
+        uiState.bridge.pendingDomains.isNotEmpty() -> getString(
+          R.string.textSettingsFloppyBridgePending,
+          uiState.bridge.pendingDomains.joinToString(", "),
+        )
         uiState.bridge.failedDomains.isNotBlank() -> getString(R.string.textSettingsFloppyBridgeFailed)
         uiState.bridge.lastSuccessAt > 0 -> {
           val time = DateFormat

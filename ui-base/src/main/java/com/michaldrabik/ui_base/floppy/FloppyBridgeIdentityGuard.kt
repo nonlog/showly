@@ -3,6 +3,7 @@ package com.michaldrabik.ui_base.floppy
 import com.michaldrabik.data_local.database.model.BridgeSyncState
 import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.data_remote.trakt.AuthorizedTraktRemoteDataSource
+import com.michaldrabik.repository.bridge.BridgeRetryRepository
 import com.michaldrabik.repository.bridge.BridgeSyncStateRepository
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -13,6 +14,7 @@ class FloppyBridgeIdentityGuard @Inject constructor(
   private val traktSource: AuthorizedTraktRemoteDataSource,
   private val floppySource: FloppyRemoteDataSource,
   private val stateRepository: BridgeSyncStateRepository,
+  private val retryRepository: BridgeRetryRepository,
 ) {
 
   companion object {
@@ -37,6 +39,7 @@ class FloppyBridgeIdentityGuard @Inject constructor(
     val stored = stateRepository.get(META_DOMAIN, IDENTITY_KEY)?.resolvedValue
     if (stored != null && stored != fingerprint) {
       stateRepository.clearAll()
+      retryRepository.clearAll()
     }
     stateRepository.save(
       BridgeSyncState(

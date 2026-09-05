@@ -3,6 +3,7 @@ package com.michaldrabik.data_local.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.michaldrabik.data_local.database.dao.ArchiveMoviesDao
+import com.michaldrabik.data_local.database.dao.BridgeRetryStatesDao
 import com.michaldrabik.data_local.database.dao.BridgeSyncStatesDao
 import com.michaldrabik.data_local.database.dao.ArchiveShowsDao
 import com.michaldrabik.data_local.database.dao.CustomListsDao
@@ -46,6 +47,7 @@ import com.michaldrabik.data_local.database.dao.WatchlistMoviesDao
 import com.michaldrabik.data_local.database.dao.WatchlistShowsDao
 import com.michaldrabik.data_local.database.migrations.DATABASE_VERSION
 import com.michaldrabik.data_local.database.model.ArchiveMovie
+import com.michaldrabik.data_local.database.model.BridgeRetryState
 import com.michaldrabik.data_local.database.model.BridgeSyncState
 import com.michaldrabik.data_local.database.model.ArchiveShow
 import com.michaldrabik.data_local.database.model.CustomList
@@ -101,6 +103,7 @@ import com.michaldrabik.data_local.database.model.WatchlistShow
     WatchlistMovie::class,
     ArchiveShow::class,
     ArchiveMovie::class,
+    BridgeRetryState::class,
     BridgeSyncState::class,
     RelatedShow::class,
     RelatedMovie::class,
@@ -157,6 +160,8 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun archiveShowsDao(): ArchiveShowsDao
 
   abstract fun archiveMoviesDao(): ArchiveMoviesDao
+
+  abstract fun bridgeRetryStatesDao(): BridgeRetryStatesDao
 
   abstract fun bridgeSyncStatesDao(): BridgeSyncStatesDao
 

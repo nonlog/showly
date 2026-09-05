@@ -72,10 +72,11 @@
 - [x] Verify the core S4 bridge kernel (watchlist/history/ratings + ledger + credentials UI) in Fork CI #36.
 - [x] Verify the Custom Lists latest-wins/tombstone migration in Fork CI #37.
 - [x] Migrate custom-list identity, presence, metadata, and movie/show membership to the same latest-wins/tombstone model.
-- [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy.
+- [ ] Add durable retry/queue behavior beyond the current retry-on-next-sync strategy. Schema-43 domain queue + WorkManager retry is implemented locally and awaits Fork CI.
 - [x] Add an explicit manual `Trakt ↔ Floppy` sync action and persist last-attempt/last-success/change-count/failed-domain status for the settings UI.
+- [x] Visually validate the redesigned credentials UI on-device (confirmed by user on 2026-09-05).
 - [x] Serialize manual/periodic full bridge runs and reset visible bridge status when the Floppy remote identity changes (verified in Fork CI #40).
-- [ ] Add per-domain pending/conflict detail beyond the current last-run summary.
+- [ ] Add per-domain pending/conflict detail beyond the current last-run summary. Pending-domain visibility is implemented locally; item-level conflict detail remains deferred until live validation.
 - [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes.
 
 ## S5 - Additional user data

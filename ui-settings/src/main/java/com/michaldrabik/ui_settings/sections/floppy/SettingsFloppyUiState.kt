@@ -16,4 +16,5 @@ data class FloppyBridgeRunUiState(
   val lastSuccessAt: Long = 0,
   val changes: Int = 0,
   val failedDomains: String = "",
+  val pendingDomains: List<String> = emptyList(),
 )

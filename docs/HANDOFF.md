@@ -1,13 +1,13 @@
 # Development Handoff
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Active line
 
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `15e2716763249fefe97e40a1d3c2b08905218b83` (`style: format serialized bridge worker`), which contains the worker-serialization hardening from `e7e93bc`.
+- Latest fully verified code head: `0d64c7f3cda4a4d2b67916d8e35dd9cc3bb0eac1` (`test: cover bridge conflict matrix`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -34,6 +34,7 @@ Last updated: 2026-09-04
 - Run #38 (`33852569892`) on `3733905` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-3733905252779db1f5a0de5324016729e09a5cef` is 15,546,615 bytes with SHA-256 `76a42ae41908552ad0c5c884d8c644f259a9c91d67ca314d6e6c9d42b853607d`; the extracted APK is 17,346,818 bytes with SHA-256 `e5c2ae7e34ba85b441ff2be90ae464e07bb7330377571e057ce3e22682fe9240`. It was installed successfully on CPH2573 as the debug package; production Showly was not touched.
 - Run #39 (`33853342095`) on `e7e93bc` exposed one ktlint-only expression-body formatting issue after the worker mutex change and was then superseded/cancelled by the formatting-only follow-up. No functional failure was observed.
 - Run #40 (`33853551265`) on `15e2716` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-15e2716763249fefe97e40a1d3c2b08905218b83` is 15,546,446 bytes with SHA-256 `149cd90ff3ce842de362f1debe2899ad5b3f98dd839ab94ff818671b3c6f6943`; the extracted APK is 17,347,591 bytes with SHA-256 `872c095937b6c4bf5c4085547afd48047cafb082d991bd9c57a6f7cf134bba28`. It was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); production Showly remains `3.70.0` (`versionCode=840`). Temporary transfer files were removed.
+- Run #41 (`33854650796`) on `0d64c7f` completed successfully and verifies the expanded latest-wins conflict matrix: newer edits, deletions, re-adds in both directions, provider timestamps, observation-time fallback, exact ties, and first-absence protection.
 
 ## Completed fork work
 
@@ -70,7 +71,7 @@ Implemented in the current working tree:
 - **Watchlist:** movie/show `Planning` presence is reconciled in both directions by TMDB identity. Trakt `listed_at`, Trakt watchlist activity, Floppy `created_at`, and Floppy status change history feed the conflict clock.
 - **History / rewatches:** each exact movie or episode watch instant is an independent event. Trakt and Floppy event sets are reconciled both ways. A later observed deletion becomes an event tombstone; a later re-add can resurrect the event. Independent rewatches are not collapsed.
 - **Ratings:** movie/show ratings are reconciled both ways. Floppy's latest `score` mutation is treated as the title-level bridge projection; Trakt's 1-10 integer scale is the common projection, so fractional Floppy scores are rounded only when exported to Trakt. Writing a rating to an untracked Floppy title uses an explicit `status: null` row so rating sync does not create a `Planning` watch state.
-- **Credentials UI:** the old oversized `MaterialAlertDialog` has been replaced with a Showly-styled expanded bottom sheet with Trakt/TMDB sections, field-level Trakt-pair validation, a primary save action, and a quiet restore-default action.
+- **Credentials UI:** the old oversized `MaterialAlertDialog` has been replaced with a Showly-styled expanded bottom sheet with Trakt/TMDB sections, field-level Trakt-pair validation, a primary save action, and a quiet restore-default action. The user visually confirmed this UI is now correct on-device on 2026-09-05.
 
 Custom-list migration verified at `89fe98e`:
 
@@ -81,6 +82,14 @@ Custom-list migration verified at `89fe98e`:
 - **Failure safety:** identity lookup/network failures keep the unresolved side divergent in the ledger, so a later sync retries instead of falsely declaring convergence. The list bridge is deliberately invoked both before and after the mature Trakt list import/export path: the pre-pass observes remote deletion before the legacy exporter can recreate it, and the post-pass propagates local→Trakt edits to Floppy in the same worker run. Member tombstones recover TMDB identity from the persisted ledger key, so a member deleted independently on both providers still converges to absence.
 
 Additional Floppy-only data (notes, playback progress, hidden/dropped semantics) stays outside the bridge until a clean Trakt mapping exists.
+
+The current working tree starts the durable retry layer (not yet a verified baseline):
+
+- Room schema 43 adds `bridge_retry_state`, a durable per-domain retry queue with queued time, attempt count, last attempt, and sanitized last-error class.
+- A dedicated `FloppyBridgeRetryWorker` retries only failed bridge domains with WorkManager network constraints and exponential backoff instead of waiting for the next full Trakt sync. Automatic retries stop after four attempts while leaving the queue durable for the next manual/periodic run.
+- Full Trakt sync and bridge retry execution share one in-process mutex, so they cannot mutate the bridge ledger concurrently.
+- Successful full reconciliation clears stale retry entries; remote identity changes clear both the bridge ledger and retry queue.
+- The Floppy settings summary reads pending domains from Room so failures are visible as `history`, `watchlist`, `ratings`, or `lists` rather than only a generic last-run failure.
 
 ## Validation still requiring a device/account
 
@@ -121,10 +130,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Visually validate the redesigned credentials sheet and the new Floppy bridge status row without using automated foreground screenshots.
-2. Expand deterministic resolver tests for newer-edit vs deletion/re-add/tie cases before touching live account data.
+1. Verify the schema-43 durable retry queue, retry worker, and pending-domain settings status in Fork CI.
+2. Install the resulting GitHub-built APK on CPH2573 and verify the 42 -> 43 Room migration without writing live Trakt/Floppy data.
 3. Perform controlled bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
-4. Add durable retry/queue state beyond retry-on-next-sync and expose per-domain pending/conflict detail after the data-domain tests are proven.
+4. After live-domain behavior is proven, add item-level pending/conflict diagnostics only where domain-level retry is insufficient.
 
 ## Historical S3 rating finding (superseded by S4)
 

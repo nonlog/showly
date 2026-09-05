@@ -3,6 +3,7 @@ package com.michaldrabik.data_local.di
 import com.michaldrabik.data_local.database.AppDatabase
 import com.michaldrabik.data_local.sources.ArchiveMoviesLocalDataSource
 import com.michaldrabik.data_local.sources.ArchiveShowsLocalDataSource
+import com.michaldrabik.data_local.sources.BridgeRetryStatesLocalDataSource
 import com.michaldrabik.data_local.sources.BridgeSyncStatesLocalDataSource
 import com.michaldrabik.data_local.sources.CustomListsItemsLocalDataSource
 import com.michaldrabik.data_local.sources.CustomListsLocalDataSource
@@ -214,6 +215,11 @@ class SourcesModule {
   @Provides
   @Singleton
   internal fun providesUser(database: AppDatabase): UserLocalDataSource = database.userDao()
+
+  @Provides
+  @Singleton
+  internal fun providesBridgeRetryStates(database: AppDatabase): BridgeRetryStatesLocalDataSource =
+    database.bridgeRetryStatesDao()
 
   @Provides
   @Singleton

@@ -26,6 +26,7 @@ import com.michaldrabik.common.errors.ShowlyError
 import com.michaldrabik.common.extensions.nowUtcMillis
 import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.repository.UserTraktManager
+import com.michaldrabik.repository.bridge.BridgeRetryRepository
 import com.michaldrabik.ui_base.Logger
 import com.michaldrabik.ui_base.R
 import com.michaldrabik.ui_base.events.EventsManager
@@ -34,9 +35,11 @@ import com.michaldrabik.ui_base.events.TraktSyncError
 import com.michaldrabik.ui_base.events.TraktSyncProgress
 import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
+import com.michaldrabik.ui_base.floppy.BridgeSyncExecutionGate
 import com.michaldrabik.ui_base.floppy.FloppyBridgeHistoryRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeListsRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeRatingsRunner
+import com.michaldrabik.ui_base.floppy.FloppyBridgeRetryWorker
 import com.michaldrabik.ui_base.floppy.FloppyBridgeWatchlistRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportListsRunner
 import com.michaldrabik.ui_base.trakt.exports.TraktExportRatingsRunner
@@ -55,7 +58,6 @@ import com.michaldrabik.ui_base.utilities.extensions.rethrowCancellation
 import com.michaldrabik.ui_model.TraktSyncSchedule
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Named
@@ -80,6 +82,7 @@ class TraktSyncWorker @AssistedInject constructor(
   private val floppyBridgeRatingsRunner: FloppyBridgeRatingsRunner,
   private val floppyBridgeWatchlistRunner: FloppyBridgeWatchlistRunner,
   private val floppyRemoteDataSource: FloppyRemoteDataSource,
+  private val bridgeRetryRepository: BridgeRetryRepository,
   private val userManager: UserTraktManager,
   @Named("syncPreferences") private val syncPreferences: SharedPreferences,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
@@ -104,8 +107,6 @@ class TraktSyncWorker @AssistedInject constructor(
     private const val ARG_IS_IMPORT = "ARG_IS_IMPORT"
     private const val ARG_IS_EXPORT = "ARG_IS_EXPORT"
     private const val ARG_IS_SILENT = "ARG_IS_SILENT"
-
-    private val SYNC_MUTEX = Mutex()
 
     const val TRAKT_LISTS_INFO_URL =
       "https://releasenotes.trakt.tv/release/Y2LCE-january-21-2025"
@@ -186,7 +187,7 @@ class TraktSyncWorker @AssistedInject constructor(
   }
 
   override suspend fun doWork(): Result =
-    SYNC_MUTEX.withLock {
+    BridgeSyncExecutionGate.mutex.withLock {
       val isImport = inputData.getBoolean(ARG_IS_IMPORT, false)
       val isExport = inputData.getBoolean(ARG_IS_EXPORT, false)
       val isSilent = inputData.getBoolean(ARG_IS_SILENT, false)
@@ -386,12 +387,22 @@ class TraktSyncWorker @AssistedInject constructor(
       .apply()
   }
 
-  private fun markFloppyBridgeResult(results: Map<String, Int?>) {
-    val failed = results.filterValues { it == null }.keys
+  private suspend fun markFloppyBridgeResult(results: Map<String, Int?>) {
+    val failed = results
+      .filterValues { it == null }
+      .keys
+      .map { if (it == "lists-pre") "lists" else it }
+      .toSortedSet()
+    val workManager = WorkManager.getInstance(applicationContext)
     if (failed.isNotEmpty()) {
+      failed.forEach { bridgeRetryRepository.enqueue(it) }
+      FloppyBridgeRetryWorker.schedule(workManager)
       markFloppyBridgeFailure(failed.joinToString(","))
       return
     }
+
+    bridgeRetryRepository.clearAll()
+    FloppyBridgeRetryWorker.cancel(workManager)
     val changes = results.values.filterNotNull().sum()
     miscPreferences
       .edit()

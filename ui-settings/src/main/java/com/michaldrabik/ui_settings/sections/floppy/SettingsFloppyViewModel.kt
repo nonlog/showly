@@ -9,6 +9,8 @@ import com.michaldrabik.data_remote.floppy.FloppyConnectionStatus
 import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.data_remote.floppy.normalizeFloppyBaseUrl
 import com.michaldrabik.repository.UserTraktManager
+import com.michaldrabik.repository.bridge.BridgeRetryRepository
+import com.michaldrabik.ui_base.floppy.FloppyBridgeRetryWorker
 import com.michaldrabik.ui_base.trakt.TraktSyncWorker
 import com.michaldrabik.ui_base.utilities.extensions.SUBSCRIBE_STOP_TIMEOUT
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +26,7 @@ import javax.inject.Named
 class SettingsFloppyViewModel @Inject constructor(
   private val floppyRemoteDataSource: FloppyRemoteDataSource,
   private val userTraktManager: UserTraktManager,
+  private val bridgeRetryRepository: BridgeRetryRepository,
   private val workManager: WorkManager,
   @Named("miscPreferences") private val miscPreferences: SharedPreferences,
 ) : ViewModel() {
@@ -51,6 +54,15 @@ class SettingsFloppyViewModel @Inject constructor(
     configState.value = config
     floppyRemoteDataSource.saveConfig(config)
     statusState.value = if (enabled) FloppyConnectionStatus.NOT_TESTED else FloppyConnectionStatus.DISABLED
+    if (!enabled) {
+      FloppyBridgeRetryWorker.cancel(workManager)
+    } else {
+      viewModelScope.launch {
+        if (bridgeRetryRepository.getAll().isNotEmpty()) {
+          FloppyBridgeRetryWorker.schedule(workManager)
+        }
+      }
+    }
   }
 
   fun saveAndTest(
@@ -90,15 +102,20 @@ class SettingsFloppyViewModel @Inject constructor(
 
   fun refreshBridgeStatus() {
     traktAuthorizedState.value = userTraktManager.isAuthorized()
-    bridgeState.value = FloppyBridgeRunUiState(
-      lastAttemptAt = miscPreferences.getLong(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_ATTEMPT, 0),
-      lastSuccessAt = miscPreferences.getLong(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_SUCCESS, 0),
-      changes = miscPreferences.getInt(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_CHANGES, 0),
-      failedDomains = miscPreferences.getString(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_FAILURES, "").orEmpty(),
-    )
+    viewModelScope.launch {
+      bridgeState.value = FloppyBridgeRunUiState(
+        lastAttemptAt = miscPreferences.getLong(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_ATTEMPT, 0),
+        lastSuccessAt = miscPreferences.getLong(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_SUCCESS, 0),
+        changes = miscPreferences.getInt(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_CHANGES, 0),
+        failedDomains = miscPreferences.getString(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_FAILURES, "").orEmpty(),
+        pendingDomains = bridgeRetryRepository.getAll().map { it.domain },
+      )
+    }
   }
 
-  private fun clearBridgeStatus() {
+  private suspend fun clearBridgeStatus() {
+    bridgeRetryRepository.clearAll()
+    FloppyBridgeRetryWorker.cancel(workManager)
     miscPreferences
       .edit()
       .remove(TraktSyncWorker.KEY_LAST_FLOPPY_BRIDGE_ATTEMPT)
