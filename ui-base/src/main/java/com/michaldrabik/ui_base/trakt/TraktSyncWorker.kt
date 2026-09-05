@@ -204,6 +204,8 @@ class TraktSyncWorker @AssistedInject constructor(
           // that legacy path can recreate a remote deletion from stale Showly state.
           bridgeResults["lists-pre"] = runFloppyBridgeListsSync()
           bridgeResults["watchlist-pre"] = runFloppyBridgeWatchlistSync()
+          bridgeResults["ratings-pre"] = runFloppyBridgeRatingsSync()
+          bridgeResults["history-pre"] = runFloppyBridgeHistorySync()
         }
         if (isImport) {
           runImportWatched()

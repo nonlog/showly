@@ -7,13 +7,17 @@ import com.michaldrabik.data_local.LocalDataSource
 import com.michaldrabik.data_local.database.model.Episode
 import com.michaldrabik.data_local.database.model.Movie
 import com.michaldrabik.data_local.database.model.Show
+import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.data_remote.trakt.AuthorizedTraktRemoteDataSource
 import com.michaldrabik.data_remote.trakt.model.SyncExportItem
 import com.michaldrabik.data_remote.trakt.model.SyncExportRequest
 import com.michaldrabik.data_remote.trakt.model.SyncHistoryItem
 import com.michaldrabik.data_remote.trakt.model.SyncItem
 import com.michaldrabik.repository.UserTraktManager
+import com.michaldrabik.repository.bridge.BridgeSyncStateRepository
+import com.michaldrabik.repository.bridge.BridgeTombstoneExportPolicy
 import com.michaldrabik.repository.settings.SettingsRepository
+import com.michaldrabik.ui_base.floppy.BridgeHistoryKey
 import com.michaldrabik.ui_base.trakt.TraktSyncRunner
 import com.michaldrabik.ui_base.utilities.extensions.rethrowCancellation
 import kotlinx.coroutines.async
@@ -29,6 +33,8 @@ class TraktExportWatchedRunner @Inject constructor(
   private val remoteSource: AuthorizedTraktRemoteDataSource,
   private val localSource: LocalDataSource,
   private val settingsRepository: SettingsRepository,
+  private val bridgeStateRepository: BridgeSyncStateRepository,
+  private val floppyRemoteDataSource: FloppyRemoteDataSource,
   userTraktManager: UserTraktManager,
 ) : TraktSyncRunner(userTraktManager) {
 
@@ -107,8 +113,16 @@ class TraktExportWatchedRunner @Inject constructor(
         val localMyMovies = batchMovies(localMoviesIds)
           .filter { movie -> remoteMoviesIds.none { it == movie.idTrakt } }
 
-        localMyMovies.mapTo(exportMovies) {
-          SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt))
+        localMyMovies.forEach { movie ->
+          val bridgeKey = movie.idTmdb
+            .takeIf { it > 0 }
+            ?.let { BridgeHistoryKey.movie(it, movie.updatedAt) }
+          val isBridgeTombstone = bridgeKey != null && isBridgeHistoryTombstone(bridgeKey, movie.updatedAt)
+          if (!isBridgeTombstone) {
+            exportMovies += SyncExportItem.create(movie.idTrakt, dateIsoStringFromMillis(movie.updatedAt))
+          } else {
+            Timber.d("Skipping stale movie history export blocked by a newer bridge tombstone.")
+          }
         }
       }
     }
@@ -223,6 +237,15 @@ class TraktExportWatchedRunner @Inject constructor(
         Timber.d("Nothing to export. Skipping...")
       }
     }
+
+  private suspend fun isBridgeHistoryTombstone(
+    entityKey: String,
+    localChangedAt: Long,
+  ): Boolean {
+    if (!floppyRemoteDataSource.getConfig().enabled) return false
+    val state = bridgeStateRepository.get(BridgeHistoryKey.DOMAIN, entityKey)
+    return BridgeTombstoneExportPolicy.shouldSuppress(state, localChangedAt)
+  }
 
   private suspend fun batchEpisodes(
     showsIds: List<Long>,

@@ -36,7 +36,6 @@ class FloppyBridgeHistoryRunner @Inject constructor(
 
   companion object {
     private const val CHUNK_SIZE = 200
-    private const val DOMAIN = "history"
     private const val PRESENT = "present"
   }
 
@@ -61,7 +60,7 @@ class FloppyBridgeHistoryRunner @Inject constructor(
       }
     }
     val floppyByKey = floppyEvents.associateBy { it.key }
-    val previous = bridgeStateRepository.getAll(DOMAIN).associateBy(BridgeSyncState::entityKey)
+    val previous = bridgeStateRepository.getAll(BridgeHistoryKey.DOMAIN).associateBy(BridgeSyncState::entityKey)
     val allKeys = buildSet {
       addAll(traktByKey.keys)
       addAll(floppyByKey.keys)
@@ -155,7 +154,7 @@ class FloppyBridgeHistoryRunner @Inject constructor(
       }
 
       pendingStates += BridgeSyncState(
-        domain = DOMAIN,
+        domain = BridgeHistoryKey.DOMAIN,
         entityKey = key,
         traktValue = finalTrakt.value,
         traktChangedAt = finalTrakt.changedAt,
@@ -288,16 +287,24 @@ class FloppyBridgeHistoryRunner @Inject constructor(
   ) {
     val key: String
       get() = when (identity.kind) {
-        FloppyBridgeHistoryKind.MOVIE -> "m:${identity.tmdbId}:$watchedAt"
-        FloppyBridgeHistoryKind.EPISODE ->
-          "e:${identity.tmdbId}:${identity.season}:${identity.episode}:$watchedAt"
+        FloppyBridgeHistoryKind.MOVIE -> BridgeHistoryKey.movie(identity.tmdbId, watchedAt)
+        FloppyBridgeHistoryKind.EPISODE -> BridgeHistoryKey.episode(
+          identity.tmdbId,
+          requireNotNull(identity.season),
+          requireNotNull(identity.episode),
+          watchedAt,
+        )
       }
   }
 
   private val FloppyBridgeHistoryEvent.key: String
     get() = when (identity.kind) {
-      FloppyBridgeHistoryKind.MOVIE -> "m:${identity.tmdbId}:$watchedAt"
-      FloppyBridgeHistoryKind.EPISODE ->
-        "e:${identity.tmdbId}:${identity.season}:${identity.episode}:$watchedAt"
+      FloppyBridgeHistoryKind.MOVIE -> BridgeHistoryKey.movie(identity.tmdbId, watchedAt)
+      FloppyBridgeHistoryKind.EPISODE -> BridgeHistoryKey.episode(
+        identity.tmdbId,
+        requireNotNull(identity.season),
+        requireNotNull(identity.episode),
+        watchedAt,
+      )
     }
 }

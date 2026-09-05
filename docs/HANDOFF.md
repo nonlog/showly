@@ -7,7 +7,7 @@ Last updated: 2026-09-05
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `a373abe171f3f3a6210706c2d71e895ecf78a272` (`feat: add durable bridge retries`).
+- Latest fully verified code head: `f39a391b4aa86c10f76317116063848c3bc37449` (`fix: preserve remote watchlist deletions`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -37,6 +37,8 @@ Last updated: 2026-09-05
 - Run #41 (`33854650796`) on `0d64c7f` completed successfully and verifies the expanded latest-wins conflict matrix: newer edits, deletions, re-adds in both directions, provider timestamps, observation-time fallback, exact ties, and first-absence protection.
 - Run #42 (`33935929026`) on `a373abe` completed successfully: ktlint, selected unit tests (including `BridgeRetryRepositoryTest`), Debug APK build, and artifact upload all passed. Artifact `showly-debug-a373abe171f3f3a6210706c2d71e895ecf78a272` is 15,566,812 bytes with SHA-256 `5311b31e2da278b92a31eb4aac2de2fc6782cd8ce346f8be85db6f49939fa8ef`; extracted APK is 17,367,261 bytes with SHA-256 `336ff266174e7081e805e8b5795803c79b04ed94cc3a8766d3e5d4bd0d7b99a6`.
 - The #42 APK was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); production `com.michaldrabik.showly2` remained `3.70.0` (`versionCode=840`). The debug app was launched once without screenshots or a manual sync to let Room open the database; device verification then confirmed schema 43, `bridge_retry_state` present with columns `domain`, `queued_at`, `attempt_count`, `last_attempt_at`, `last_error`, and zero pending retry rows. Temporary APK/database extraction files were removed.
+- Run #43 (`33937077077`) on `dea10fd` completed successfully and verified the debug-only, shell-permission-protected bridge QA trigger. Its APK SHA-256 is `dbbda91ff128baff26aaaba6f740de3287d7195067ce9893f2e5e22e447544ba`; it was installed on CPH2573 and used for the controlled live Custom Lists/Watchlist tests below. Production Showly remained untouched.
+- Run #44 (`33938982250`) on `f39a391` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-f39a391b4aa86c10f76317116063848c3bc37449` is 15,567,234 bytes with SHA-256 `114c8e69cdb55fe6c3b97ae825a6c1c4e33b09a5dd5a4c1f458e650c05b94556`. This is the verified Watchlist pre-pass fix baseline; live re-test is pending because the phone-side FRP `phone-adb` proxy disappeared after the failing QA case.
 
 ## Completed fork work
 
@@ -99,7 +101,7 @@ Fork CI #42 verifies the durable retry layer:
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
 - S1: Floppy settings screen against a real user API token.
 - S2: on-device bootstrap test against the configured Floppy account. GitHub CI verification for the current integrated branch is tracked above.
-- Device install baseline: CI #40 debug APK is installed and ready for account/feature validation; installation alone is not counted as functional bridge validation.
+- Device install baseline: CI #43 debug APK is installed and has been used for controlled live bridge validation. CI #44 is green but not yet installed because the phone-side FRP ADB proxy is currently unavailable.
 
 ## S3 active design: watchlist mirroring
 
@@ -133,10 +135,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Perform controlled bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
-2. Validate that a deliberately recoverable bridge-domain failure is queued in `bridge_retry_state`, retried by WorkManager, and cleared after convergence.
-3. After live-domain behavior is proven, add item-level pending/conflict diagnostics only where domain-level retry is insufficient.
-4. Re-evaluate S5 only for data with a clean semantic mapping between Trakt and Floppy.
+1. Verify the Ratings/History stale-export hardening in Fork CI, then install the consolidated build when phone-side ADB/FRP connectivity returns.
+2. Re-run the controlled Trakt Watchlist deletion case and confirm the #44 pre-pass removes the Floppy Planning row without Trakt resurrection; clean the remaining disposable Manos QA state afterward.
+3. Perform controlled Ratings deletion/re-add and History/rewatch deletion/re-add tests in both directions.
+4. Validate that a deliberately recoverable bridge-domain failure is queued in `bridge_retry_state`, retried by WorkManager, and cleared after convergence; only then decide whether item-level pending/conflict diagnostics are necessary.
 
 ## Historical S3 rating finding (superseded by S4)
 
@@ -177,3 +179,4 @@ Debug builds now expose a shell-only QA broadcast receiver guarded by `android.p
 - Watchlist passed Trakt -> Floppy add, Floppy -> Trakt delete, and Floppy -> Trakt re-add. A controlled Trakt-side delete exposed a legacy resurrection bug: the old watchlist importer leaves the stale local row behind and the old exporter re-adds it to Trakt before the bridge post-pass can observe the deletion, leaving the Floppy Planning row present.
 - The fix is to run the bidirectional watchlist resolver as a pre-pass, just like Custom Lists. `FloppyBridgeWatchlistRunner` already applies the resolved absence to Showly local watchlist state, so the legacy exporter no longer has stale local state to recreate after a remote deletion. The normal post-pass remains in place for same-run convergence.
 - History and Ratings still require controlled live deletion/re-add tests because their mature Trakt import/export paths may have analogous stale-local resurrection semantics and must not be assumed safe from the Watchlist result alone.
+- Code audit confirmed the analogous risk: Ratings preload does not remove a local rating that disappeared remotely, and movie watched export can re-emit a stale local `MyMovie` after the last remote history event is deleted. The current working tree therefore adds Ratings and History bridge pre-passes before the legacy import/export path. For movie history, the bridge writes the exact event tombstone first and the mature exporter consults that ledger to suppress only a local event whose timestamp is not newer than the tombstone. A newer local watched timestamp is still allowed to export. The suppression policy has focused repository unit tests.
