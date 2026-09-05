@@ -10,6 +10,7 @@ import com.michaldrabik.data_local.database.model.TraktSyncQueue
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Operation
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type
 import com.michaldrabik.data_local.utilities.TransactionsProvider
+import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.repository.UserTraktManager
 import com.michaldrabik.repository.settings.SettingsRepository
 import timber.log.Timber
@@ -24,6 +25,7 @@ class QuickSyncManager @Inject constructor(
   private val localSource: LocalDataSource,
   private val transactions: TransactionsProvider,
   private val workManager: WorkManager,
+  private val floppyRemoteDataSource: FloppyRemoteDataSource,
 ) {
 
   suspend fun scheduleEpisodes(
@@ -32,7 +34,7 @@ class QuickSyncManager @Inject constructor(
     customDate: ZonedDateTime?,
     clearProgress: Boolean = false,
   ) {
-    if (!ensureQuickSync() && !(clearProgress && ensureQuickRemove())) {
+    if (!ensureBridgeMutationSync() && !(clearProgress && ensureBridgeMutationRemove())) {
       return
     }
 
@@ -48,7 +50,7 @@ class QuickSyncManager @Inject constructor(
     moviesIds: List<Long>,
     customDate: ZonedDateTime?,
   ) {
-    if (!ensureQuickSync()) return
+    if (!ensureBridgeMutationSync()) return
 
     val timestamp = customDate?.toUtcZone()?.toMillis() ?: nowUtcMillis()
     val items = moviesIds.map { TraktSyncQueue.createMovie(it, timestamp, timestamp) }
@@ -59,7 +61,7 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun scheduleShowsWatchlist(showsIds: List<Long>) {
-    if (!ensureQuickSync()) return
+    if (!ensureBridgeMutationSync()) return
 
     val time = nowUtcMillis()
     val items = showsIds.map { TraktSyncQueue.createShowWatchlist(it, time, time) }
@@ -70,7 +72,7 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun scheduleMoviesWatchlist(moviesIds: List<Long>) {
-    if (!ensureQuickSync()) return
+    if (!ensureBridgeMutationSync()) return
 
     val time = nowUtcMillis()
     val items = moviesIds.map { TraktSyncQueue.createMovieWatchlist(it, time, time) }
@@ -164,10 +166,25 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun clearEpisodes(episodesIds: List<Long>) {
-    if (!ensureQuickRemove()) return
+    if (!ensureBridgeMutationRemove()) return
 
-    val count = localSource.traktSyncQueue.deleteAll(episodesIds, Type.EPISODE.slug)
-    Timber.d("Episodes removed from sync queue. Count: $count")
+    if (!floppyRemoteDataSource.getConfig().enabled) {
+      val count = localSource.traktSyncQueue.deleteAll(episodesIds, Type.EPISODE.slug)
+      Timber.d("Episodes removed from sync queue. Count: $count")
+      return
+    }
+
+    val time = nowUtcMillis()
+    val removals = episodesIds.map { id ->
+      TraktSyncQueue
+        .createEpisode(id, null, time, time, clearProgress = false)
+        .copy(operation = Operation.REMOVE.slug)
+    }
+    transactions.withTransaction {
+      localSource.traktSyncQueue.deleteAll(episodesIds, Type.EPISODE.slug)
+      localSource.traktSyncQueue.insert(removals)
+    }
+    QuickSyncWorker.schedule(workManager)
   }
 
   suspend fun clearEpisodes() {
@@ -178,24 +195,63 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun clearMovies(moviesIds: List<Long>) {
-    if (!ensureQuickRemove()) return
+    if (!ensureBridgeMutationRemove()) return
 
-    localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE.slug)
-    Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
+    if (!floppyRemoteDataSource.getConfig().enabled) {
+      localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE.slug)
+      Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
+      return
+    }
+
+    val time = nowUtcMillis()
+    val removals = moviesIds.map { id ->
+      TraktSyncQueue.createMovie(id, time, time).copy(operation = Operation.REMOVE.slug)
+    }
+    transactions.withTransaction {
+      localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE.slug)
+      localSource.traktSyncQueue.insert(removals)
+    }
+    QuickSyncWorker.schedule(workManager)
   }
 
   suspend fun clearWatchlistShows(showsIds: List<Long>) {
-    if (!ensureQuickRemove()) return
+    if (!ensureBridgeMutationRemove()) return
 
-    localSource.traktSyncQueue.deleteAll(showsIds, Type.SHOW_WATCHLIST.slug)
-    Timber.d("Shows removed from sync queue. Count: ${showsIds.size}")
+    if (!floppyRemoteDataSource.getConfig().enabled) {
+      localSource.traktSyncQueue.deleteAll(showsIds, Type.SHOW_WATCHLIST.slug)
+      Timber.d("Shows removed from sync queue. Count: ${showsIds.size}")
+      return
+    }
+
+    val time = nowUtcMillis()
+    val removals = showsIds.map { id ->
+      TraktSyncQueue.createShowWatchlist(id, time, time).copy(operation = Operation.REMOVE.slug)
+    }
+    transactions.withTransaction {
+      localSource.traktSyncQueue.deleteAll(showsIds, Type.SHOW_WATCHLIST.slug)
+      localSource.traktSyncQueue.insert(removals)
+    }
+    QuickSyncWorker.schedule(workManager)
   }
 
   suspend fun clearWatchlistMovies(moviesIds: List<Long>) {
-    if (!ensureQuickRemove()) return
+    if (!ensureBridgeMutationRemove()) return
 
-    localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE_WATCHLIST.slug)
-    Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
+    if (!floppyRemoteDataSource.getConfig().enabled) {
+      localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE_WATCHLIST.slug)
+      Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
+      return
+    }
+
+    val time = nowUtcMillis()
+    val removals = moviesIds.map { id ->
+      TraktSyncQueue.createMovieWatchlist(id, time, time).copy(operation = Operation.REMOVE.slug)
+    }
+    transactions.withTransaction {
+      localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE_WATCHLIST.slug)
+      localSource.traktSyncQueue.insert(removals)
+    }
+    QuickSyncWorker.schedule(workManager)
   }
 
   suspend fun clearHiddenShows(ids: List<Long>) {
@@ -213,9 +269,8 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun isAnyScheduled(): Boolean {
-    if (!ensureAuthorized()) return false
-
-    return localSource.traktSyncQueue.getAll().isNotEmpty()
+    val hasTarget = userTraktManager.isAuthorized() || floppyRemoteDataSource.getConfig().enabled
+    return hasTarget && localSource.traktSyncQueue.getAll().isNotEmpty()
   }
 
   private suspend fun ensureQuickSync(): Boolean {
@@ -238,6 +293,16 @@ class QuickSyncManager @Inject constructor(
       return false
     }
     return true
+  }
+
+  private suspend fun ensureBridgeMutationSync(): Boolean {
+    if (floppyRemoteDataSource.getConfig().enabled) return true
+    return ensureQuickSync()
+  }
+
+  private suspend fun ensureBridgeMutationRemove(): Boolean {
+    if (floppyRemoteDataSource.getConfig().enabled) return true
+    return ensureQuickRemove()
   }
 
   private fun ensureAuthorized(): Boolean {

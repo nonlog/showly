@@ -10,7 +10,6 @@ import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type.HIDDEN_SHO
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type.MOVIE
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type.MOVIE_WATCHLIST
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type.SHOW_WATCHLIST
-import com.michaldrabik.data_local.utilities.TransactionsProvider
 import com.michaldrabik.data_remote.trakt.AuthorizedTraktRemoteDataSource
 import com.michaldrabik.data_remote.trakt.model.SyncExportItem
 import com.michaldrabik.data_remote.trakt.model.SyncExportRequest
@@ -29,7 +28,6 @@ import javax.inject.Singleton
 class QuickSyncRunner @Inject constructor(
   private val remoteSource: AuthorizedTraktRemoteDataSource,
   private val localSource: LocalDataSource,
-  private val transactions: TransactionsProvider,
   private val settingsRepository: SettingsRepository,
   private val duplicateEpisodesCase: QuickSyncDuplicateEpisodesCase,
   private val duplicateMoviesCase: QuickSyncDuplicateMoviesCase,
@@ -52,23 +50,15 @@ class QuickSyncRunner @Inject constructor(
 
   override suspend fun run(): Int {
     Timber.d("Initialized.")
-    try {
-      checkAuthorization()
-      val moviesEnabled = settingsRepository.isMoviesEnabled
+    checkAuthorization()
+    val moviesEnabled = settingsRepository.isMoviesEnabled
 
-      val historyCount = exportHistoryItems(moviesEnabled)
-      val watchlistCount = exportWatchlistItems(moviesEnabled)
-      val hiddenCount = exportHiddenItems(moviesEnabled)
+    val historyCount = exportHistoryItems(moviesEnabled)
+    val watchlistCount = exportWatchlistItems(moviesEnabled)
+    val hiddenCount = exportHiddenItems(moviesEnabled)
 
-      Timber.d("Finished with success.")
-      return historyCount + watchlistCount + hiddenCount
-    } catch (error: Throwable) {
-      throw error
-    } finally {
-      syncTypes.forEach {
-        localSource.traktSyncQueue.deleteAll(it)
-      }
-    }
+    Timber.d("Finished with success.")
+    return historyCount + watchlistCount + hiddenCount
   }
 
   private suspend fun exportHistoryItems(
@@ -79,7 +69,7 @@ class QuickSyncRunner @Inject constructor(
     clearedProgressIds: MutableSet<Long> = mutableSetOf(),
   ): Int {
     val types = if (moviesEnabled) listOf(MOVIE, EPISODE) else listOf(EPISODE)
-    val items = localSource.traktSyncQueue.getAll(types.map { it.slug })
+    val items = localSource.traktSyncQueue.getAllPendingTrakt(types.map { it.slug })
     if (items.isEmpty()) {
       Timber.d("Nothing to export. Cancelling..")
       return count
@@ -88,18 +78,26 @@ class QuickSyncRunner @Inject constructor(
     Timber.d("Exporting ${items.size} items...")
 
     val batch = items.take(BATCH_LIMIT)
-    val exportEpisodes = batch.filter { it.type == EPISODE.slug }.distinctBy { it.idTrakt }
-    val exportMovies = batch.filter { it.type == MOVIE.slug }.distinctBy { it.idTrakt }
-    val clearProgress = items.any { it.operation == TraktSyncQueue.Operation.ADD_WITH_CLEAR.slug }
+    val effective = batch
+      .groupBy { it.type to it.idTrakt }
+      .values
+      .map { entries -> entries.maxBy { it.updatedAt } }
+    val addEpisodes = effective
+      .filter { it.type == EPISODE.slug && it.operation != TraktSyncQueue.Operation.REMOVE.slug }
+    val addMovies = effective
+      .filter { it.type == MOVIE.slug && it.operation != TraktSyncQueue.Operation.REMOVE.slug }
+    val removeEpisodes = effective
+      .filter { it.type == EPISODE.slug && it.operation == TraktSyncQueue.Operation.REMOVE.slug }
+    val removeMovies = effective
+      .filter { it.type == MOVIE.slug && it.operation == TraktSyncQueue.Operation.REMOVE.slug }
+    val clearProgress = addEpisodes.any { it.operation == TraktSyncQueue.Operation.ADD_WITH_CLEAR.slug }
 
     if (clearProgress) {
       Timber.d("Clearing progress for shows...")
-
-      val requestItems = items
+      val requestItems = addEpisodes
         .mapNotNull { it.idList?.let { id -> SyncExportItem.create(id) } }
         .distinctBy { it.ids.trakt }
         .filterNot { clearedProgressIds.contains(it.ids.trakt) }
-
       if (requestItems.isNotEmpty()) {
         remoteSource.postDeleteProgress(SyncExportRequest(shows = requestItems))
         clearedProgressIds.addAll(requestItems.map { it.ids.trakt })
@@ -107,40 +105,41 @@ class QuickSyncRunner @Inject constructor(
       }
     }
 
-    transactions.withTransaction {
-      val batchIds = batch.map { it.idTrakt }
-      with(localSource.traktSyncQueue) {
-        deleteAll(batchIds, EPISODE.slug)
-        deleteAll(batchIds, MOVIE.slug)
-      }
-    }
-
     val (duplicateEpisodes, remoteShows) =
-      duplicateEpisodesCase.checkDuplicateEpisodes(exportEpisodes, remoteFetchedShows)
+      duplicateEpisodesCase.checkDuplicateEpisodes(addEpisodes, remoteFetchedShows)
     val (duplicateMovies, remoteMovies) =
-      duplicateMoviesCase.checkDuplicateMovies(exportMovies, remoteFetchedMovies)
+      duplicateMoviesCase.checkDuplicateMovies(addMovies, remoteFetchedMovies)
 
-    val request = SyncExportRequest(
-      episodes = exportEpisodes
+    val addRequest = SyncExportRequest(
+      episodes = addEpisodes
         .map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) }
         .filter { it.ids.trakt !in duplicateEpisodes },
-      movies = exportMovies
+      movies = addMovies
         .map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) }
         .filter { it.ids.trakt !in duplicateMovies },
     )
+    val removeRequest = SyncExportRequest(
+      episodes = removeEpisodes.map { SyncExportItem.create(it.idTrakt) },
+      movies = removeMovies.map { SyncExportItem.create(it.idTrakt) },
+    )
 
-    if (request.episodes.isNotEmpty() || request.movies.isNotEmpty()) {
-      remoteSource.postSyncWatched(request)
+    if (addRequest.episodes.isNotEmpty() || addRequest.movies.isNotEmpty()) {
+      remoteSource.postSyncWatched(addRequest)
       localSource.episodes.updateIsExported(
-        episodesIds = request.episodes.map { it.ids.trakt },
+        episodesIds = addRequest.episodes.map { it.ids.trakt },
         exportedAt = nowUtcMillis(),
       )
     }
+    if (removeRequest.episodes.isNotEmpty() || removeRequest.movies.isNotEmpty()) {
+      remoteSource.postDeleteProgress(removeRequest)
+    }
 
-    val currentCount = count + exportEpisodes.count() + exportMovies.count()
+    // Acknowledge only the exact rows Trakt has accepted. Floppy independently
+    // acknowledges the same durable rows before completed mutations are deleted.
+    localSource.traktSyncQueue.markTraktDone(batch.map { it.id })
 
-    // Check for more items
-    val newItems = localSource.traktSyncQueue.getAll(types.map { it.slug })
+    val currentCount = count + effective.size
+    val newItems = localSource.traktSyncQueue.getAllPendingTrakt(types.map { it.slug })
     if (newItems.isNotEmpty()) {
       delay(DELAY)
       return exportHistoryItems(
@@ -160,33 +159,40 @@ class QuickSyncRunner @Inject constructor(
     count: Int = 0,
   ): Int {
     val types = if (moviesEnabled) listOf(MOVIE_WATCHLIST, SHOW_WATCHLIST) else listOf(SHOW_WATCHLIST)
-    val items = localSource.traktSyncQueue.getAll(types.map { it.slug }).take(BATCH_LIMIT)
+    val items = localSource.traktSyncQueue.getAllPendingTrakt(types.map { it.slug }).take(BATCH_LIMIT)
     if (items.isEmpty()) {
       Timber.d("Nothing to export. Cancelling..")
       return count
     }
 
     Timber.d("Exporting watchlist items...")
+    val effective = items
+      .groupBy { it.type to it.idTrakt }
+      .values
+      .map { entries -> entries.maxBy { it.updatedAt } }
+    val adds = effective.filter { it.operation != TraktSyncQueue.Operation.REMOVE.slug }
+    val removes = effective.filter { it.operation == TraktSyncQueue.Operation.REMOVE.slug }
 
-    val exportShows = items.filter { it.type == SHOW_WATCHLIST.slug }.distinctBy { it.idTrakt }
-    val exportMovies = items.filter { it.type == MOVIE_WATCHLIST.slug }.distinctBy { it.idTrakt }
+    fun List<TraktSyncQueue>.toRequest() =
+      SyncExportRequest(
+        shows = filter { it.type == SHOW_WATCHLIST.slug }
+          .map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) },
+        movies = filter { it.type == MOVIE_WATCHLIST.slug }
+          .map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) },
+      )
 
-    val request = SyncExportRequest(
-      shows = exportShows.map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) },
-      movies = exportMovies.map { SyncExportItem.create(it.idTrakt, dateIsoStringFromMillis(it.updatedAt)) },
-    )
-
-    transactions.withTransaction {
-      val ids = items.map { it.idTrakt }
-      localSource.traktSyncQueue.deleteAll(ids, MOVIE_WATCHLIST.slug)
-      localSource.traktSyncQueue.deleteAll(ids, SHOW_WATCHLIST.slug)
+    val addRequest = adds.toRequest()
+    val removeRequest = removes.toRequest()
+    if (addRequest.shows.isNotEmpty() || addRequest.movies.isNotEmpty()) {
+      remoteSource.postSyncWatchlist(addRequest)
     }
-    remoteSource.postSyncWatchlist(request)
+    if (removeRequest.shows.isNotEmpty() || removeRequest.movies.isNotEmpty()) {
+      remoteSource.postDeleteWatchlist(removeRequest)
+    }
 
-    val currentCount = count + exportShows.count() + exportMovies.count()
-
-    // Check for more items
-    val newItems = localSource.traktSyncQueue.getAll(types.map { it.slug })
+    localSource.traktSyncQueue.markTraktDone(items.map { it.id })
+    val currentCount = count + effective.size
+    val newItems = localSource.traktSyncQueue.getAllPendingTrakt(types.map { it.slug })
     if (newItems.isNotEmpty()) {
       delay(DELAY)
       return exportWatchlistItems(moviesEnabled, currentCount)
@@ -211,14 +217,6 @@ class QuickSyncRunner @Inject constructor(
     val exportShows = items.filter { it.type == HIDDEN_SHOW.slug }.distinctBy { it.idTrakt }
     val exportMovies = items.filter { it.type == HIDDEN_MOVIE.slug }.distinctBy { it.idTrakt }
 
-    transactions.withTransaction {
-      val ids = items.map { it.idTrakt }
-      with(localSource.traktSyncQueue) {
-        deleteAll(ids, HIDDEN_SHOW.slug)
-        deleteAll(ids, HIDDEN_MOVIE.slug)
-      }
-    }
-
     if (exportShows.isNotEmpty()) {
       remoteSource.postHiddenShows(
         shows = exportShows.map { SyncExportItem.create(it.idTrakt, hiddenAt = dateIsoStringFromMillis(it.updatedAt)) },
@@ -236,6 +234,8 @@ class QuickSyncRunner @Inject constructor(
         },
       )
     }
+
+    localSource.traktSyncQueue.delete(items)
 
     val currentCount = count + exportShows.count() + exportMovies.count()
 

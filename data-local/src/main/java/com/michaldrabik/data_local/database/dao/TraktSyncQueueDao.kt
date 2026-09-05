@@ -23,6 +23,21 @@ interface TraktSyncQueueDao : TraktSyncQueueLocalDataSource {
   @Query("SELECT * FROM trakt_sync_queue WHERE type IN (:types) ORDER BY created_at ASC")
   override suspend fun getAll(types: List<String>): List<TraktSyncQueue>
 
+  @Query("SELECT * FROM trakt_sync_queue WHERE type IN (:types) AND trakt_done = 0 ORDER BY created_at ASC")
+  override suspend fun getAllPendingTrakt(types: List<String>): List<TraktSyncQueue>
+
+  @Query("SELECT * FROM trakt_sync_queue WHERE type IN (:types) AND floppy_done = 0 ORDER BY created_at ASC")
+  override suspend fun getAllPendingFloppy(types: List<String>): List<TraktSyncQueue>
+
+  @Query("UPDATE trakt_sync_queue SET trakt_done = 1 WHERE id IN (:ids)")
+  override suspend fun markTraktDone(ids: List<Long>)
+
+  @Query("UPDATE trakt_sync_queue SET floppy_done = 1 WHERE id IN (:ids)")
+  override suspend fun markFloppyDone(ids: List<Long>)
+
+  @Query("DELETE FROM trakt_sync_queue WHERE trakt_done = 1 AND floppy_done = 1")
+  override suspend fun deleteCompleted(): Int
+
   @Query("DELETE FROM trakt_sync_queue WHERE id_trakt IN (:idsTrakt) AND type = :type")
   override suspend fun deleteAll(
     idsTrakt: List<Long>,

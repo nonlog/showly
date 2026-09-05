@@ -13,6 +13,8 @@ data class TraktSyncQueue(
   @ColumnInfo(name = "operation") val operation: String,
   @ColumnInfo(name = "created_at") val createdAt: Long,
   @ColumnInfo(name = "updated_at") val updatedAt: Long,
+  @ColumnInfo(name = "trakt_done", defaultValue = "0") val traktDone: Boolean = false,
+  @ColumnInfo(name = "floppy_done", defaultValue = "0") val floppyDone: Boolean = false,
 ) {
 
   companion object {

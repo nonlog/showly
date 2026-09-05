@@ -54,11 +54,7 @@ class FloppyBridgeHistoryRunner @Inject constructor(
     }
     val traktByKey = traktEvents.associateBy(TraktHistoryEvent::key)
 
-    val floppyEvents = buildList {
-      floppyBridgeSource.fetchHistoryIdentities().forEach { identity ->
-        addAll(floppyBridgeSource.fetchHistoryEvents(identity))
-      }
-    }
+    val floppyEvents = floppyBridgeSource.fetchAllHistoryEvents()
     val floppyByKey = floppyEvents.associateBy { it.key }
     val previous = bridgeStateRepository.getAll(BridgeHistoryKey.DOMAIN).associateBy(BridgeSyncState::entityKey)
     val allKeys = buildSet {

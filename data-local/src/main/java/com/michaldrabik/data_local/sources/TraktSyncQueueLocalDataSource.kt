@@ -10,6 +10,16 @@ interface TraktSyncQueueLocalDataSource {
 
   suspend fun getAll(types: List<String>): List<TraktSyncQueue>
 
+  suspend fun getAllPendingTrakt(types: List<String>): List<TraktSyncQueue>
+
+  suspend fun getAllPendingFloppy(types: List<String>): List<TraktSyncQueue>
+
+  suspend fun markTraktDone(ids: List<Long>)
+
+  suspend fun markFloppyDone(ids: List<Long>)
+
+  suspend fun deleteCompleted(): Int
+
   suspend fun deleteAll(
     idsTrakt: List<Long>,
     type: String,

@@ -103,4 +103,41 @@ class FloppyRemoteDataSourceTest {
       resolveFloppyRatingWriteAction(hasConsumption = true, score = null),
     )
   }
+
+  @Test
+  fun `maps flat movie history entry without detail request`() {
+    val event = FloppyBridgeFlatHistoryWire(
+      mediaType = "movie",
+      item = FloppyBridgeHistoryItemWire(mediaId = "334541", source = "tmdb", mediaType = "movie"),
+      instanceId = 24,
+      playedAtLocal = "2026-03-22T13:26:00+08:00",
+    ).toHistoryEvent()
+
+    assertEquals(FloppyBridgeHistoryKind.MOVIE, event?.identity?.kind)
+    assertEquals(334541L, event?.identity?.tmdbId)
+    assertEquals(24L, event?.consumptionId)
+    assertEquals(1774157160000L, event?.watchedAt)
+  }
+
+  @Test
+  fun `maps flat episode history entry using parent tmdb id and coordinates`() {
+    val event = FloppyBridgeFlatHistoryWire(
+      mediaType = "episode",
+      item = FloppyBridgeHistoryItemWire(
+        mediaId = "1399",
+        source = "tmdb",
+        mediaType = "episode",
+        seasonNumber = 2,
+        episodeNumber = 3,
+      ),
+      instanceId = 99,
+      playedAtLocal = "2026-09-05T12:00:00+08:00",
+    ).toHistoryEvent()
+
+    assertEquals(FloppyBridgeHistoryKind.EPISODE, event?.identity?.kind)
+    assertEquals(1399L, event?.identity?.tmdbId)
+    assertEquals(2, event?.identity?.season)
+    assertEquals(3, event?.identity?.episode)
+    assertEquals(99L, event?.consumptionId)
+  }
 }

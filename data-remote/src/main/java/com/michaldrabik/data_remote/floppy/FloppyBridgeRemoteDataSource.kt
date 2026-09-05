@@ -47,6 +47,10 @@ internal data class FloppyBridgeHistoryItemWire(
 internal data class FloppyBridgeFlatHistoryWire(
   @Json(name = "media_type") val mediaType: String? = null,
   val item: FloppyBridgeHistoryItemWire? = null,
+  @Json(name = "instance_id") val instanceId: Long? = null,
+  @Json(name = "played_at_local") val playedAtLocal: String? = null,
+  @Json(name = "season_number") val seasonNumber: Int? = null,
+  @Json(name = "episode_number") val episodeNumber: Int? = null,
 )
 
 internal data class FloppyBridgeFlatHistoryEnvelope(
@@ -148,7 +152,7 @@ internal fun resolveFloppyRatingWriteAction(
   }
 
 interface FloppyBridgeRemoteDataSource {
-  suspend fun fetchHistoryIdentities(): List<FloppyBridgeHistoryIdentity>
+  suspend fun fetchAllHistoryEvents(): List<FloppyBridgeHistoryEvent>
 
   suspend fun fetchHistoryEvents(identity: FloppyBridgeHistoryIdentity): List<FloppyBridgeHistoryEvent>
 
@@ -208,9 +212,9 @@ internal class DefaultFloppyBridgeRemoteDataSource @Inject constructor(
   private val ratingCreateAdapter = moshi.adapter(FloppyBridgeRatingCreateRequest::class.java).serializeNulls()
   private val ratingUpdateAdapter = moshi.adapter(FloppyBridgeRatingUpdateRequest::class.java).serializeNulls()
 
-  override suspend fun fetchHistoryIdentities(): List<FloppyBridgeHistoryIdentity> {
+  override suspend fun fetchAllHistoryEvents(): List<FloppyBridgeHistoryEvent> {
     val (config, baseUrl) = syncConfig()
-    val identities = linkedSetOf<FloppyBridgeHistoryIdentity>()
+    val events = mutableListOf<FloppyBridgeHistoryEvent>()
     var offset = 0
     while (true) {
       val response = executeRequest(
@@ -227,12 +231,12 @@ internal class DefaultFloppyBridgeRemoteDataSource @Inject constructor(
       } catch (error: Exception) {
         throw IOException("Unable to parse Floppy history catalog", error)
       } ?: throw IOException("Floppy history catalog was empty")
-      envelope.results.mapNotNullTo(identities) { it.toHistoryIdentity() }
+      envelope.results.mapNotNullTo(events) { it.toHistoryEvent() }
       val nextOffset = offset + envelope.results.size
       if (envelope.results.isEmpty() || nextOffset >= envelope.pagination.total) break
       offset = nextOffset
     }
-    return identities.toList()
+    return events
   }
 
   override suspend fun fetchHistoryEvents(identity: FloppyBridgeHistoryIdentity): List<FloppyBridgeHistoryEvent> {
@@ -571,19 +575,22 @@ internal class DefaultFloppyBridgeRemoteDataSource @Inject constructor(
     }
 }
 
-private fun FloppyBridgeFlatHistoryWire.toHistoryIdentity(): FloppyBridgeHistoryIdentity? {
+internal fun FloppyBridgeFlatHistoryWire.toHistoryEvent(): FloppyBridgeHistoryEvent? {
   val item = item ?: return null
   if (item.source != "tmdb") return null
   val tmdbId = item.mediaId?.toLongOrNull()?.takeIf { it > 0 } ?: return null
-  return when (mediaType ?: item.mediaType) {
+  val consumptionId = instanceId?.takeIf { it > 0 } ?: return null
+  val watchedAt = playedAtLocal.toEpochMillisOrNull() ?: return null
+  val identity = when (mediaType ?: item.mediaType) {
     "movie" -> FloppyBridgeHistoryIdentity(FloppyBridgeHistoryKind.MOVIE, tmdbId)
     "episode" -> {
-      val season = item.seasonNumber ?: return null
-      val episode = item.episodeNumber ?: return null
+      val season = seasonNumber ?: item.seasonNumber ?: return null
+      val episode = episodeNumber ?: item.episodeNumber ?: return null
       FloppyBridgeHistoryIdentity(FloppyBridgeHistoryKind.EPISODE, tmdbId, season, episode)
     }
-    else -> null
+    else -> return null
   }
+  return FloppyBridgeHistoryEvent(identity, consumptionId, watchedAt)
 }
 
 private fun Any?.toDoubleOrNull(): Double? =

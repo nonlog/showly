@@ -237,11 +237,11 @@ class TraktSyncWorker @AssistedInject constructor(
           }
         }
         if (isImport || isExport) {
-          bridgeResults["history"] = runFloppyBridgeHistorySync()
-          bridgeResults["watchlist"] = runFloppyBridgeWatchlistSync()
+          // History and Watchlist no longer need a second full remote scan. Showly-originated
+          // mutations use the durable QuickSync fast path to reach both Trakt and Floppy,
+          // while the pre-pass already reconciles changes that originated remotely.
+          // Ratings and Lists retain a post-pass until their local fast paths are migrated.
           bridgeResults["ratings"] = runFloppyBridgeRatingsSync()
-          // Run lists again after the local<->Trakt path so local edits that were
-          // exported during this worker are propagated to Floppy in the same sync.
           bridgeResults["lists"] = runFloppyBridgeListsSync()
         }
 
