@@ -821,6 +821,43 @@ class Migrations(
     override fun migrate(database: SupportSQLiteDatabase) {
       database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN trakt_done INTEGER NOT NULL DEFAULT 0")
       database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN floppy_done INTEGER NOT NULL DEFAULT 0")
+
+      // Imported Trakt history always carries last_exported_at. A watched episode with
+      // last_exported_at = NULL is therefore a durable signal for local-only history
+      // that older Showly versions never exported (notably unfollowed shows). Seed it
+      // into the new two-provider outbox so the first post-upgrade QuickSync recovers it.
+      database.execSQL(
+        """
+        INSERT INTO trakt_sync_queue (
+          id_trakt,
+          id_list,
+          type,
+          operation,
+          created_at,
+          updated_at,
+          trakt_done,
+          floppy_done
+        )
+        SELECT
+          e.id_trakt,
+          e.id_show_trakt,
+          'episode',
+          'add',
+          COALESCE(e.last_watched_at, CAST(strftime('%s','now') AS INTEGER) * 1000),
+          COALESCE(e.last_watched_at, CAST(strftime('%s','now') AS INTEGER) * 1000),
+          0,
+          0
+        FROM episodes e
+        WHERE e.is_watched = 1
+          AND e.last_exported_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM trakt_sync_queue q
+            WHERE q.type = 'episode'
+              AND q.id_trakt = e.id_trakt
+          )
+        """.trimIndent(),
+      )
     }
   }
 

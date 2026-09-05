@@ -39,13 +39,11 @@ class EpisodesSetSeasonWatchedCase @Inject constructor(
     when {
       isChecked -> {
         val episodesAdded = episodesManager.setSeasonWatched(bundle, customDate)
-        if (isMyShows) {
-          quickSyncManager.scheduleEpisodes(
-            showId = show.traktId,
-            episodesIds = episodesAdded.map { it.ids.trakt.id },
-            customDate = customDate,
-          )
-        }
+        quickSyncManager.scheduleEpisodes(
+          showId = show.traktId,
+          episodesIds = episodesAdded.map { it.ids.trakt.id },
+          customDate = customDate,
+        )
         return Result.SUCCESS
       }
       else -> {

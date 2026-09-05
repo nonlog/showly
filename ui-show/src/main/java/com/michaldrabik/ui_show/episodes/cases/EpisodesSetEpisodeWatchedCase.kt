@@ -36,14 +36,12 @@ class EpisodesSetEpisodeWatchedCase @Inject constructor(
     when {
       isChecked -> {
         episodesManager.setEpisodeWatched(episodeBundle, customDate)
-        if (isMyShows) {
-          quickSyncManager.scheduleEpisodes(
-            episodesIds = listOf(episode.ids.trakt.id),
-            showId = show.traktId,
-            customDate = customDate,
-            clearProgress = false,
-          )
-        }
+        quickSyncManager.scheduleEpisodes(
+          episodesIds = listOf(episode.ids.trakt.id),
+          showId = show.traktId,
+          customDate = customDate,
+          clearProgress = false,
+        )
         return Result.SUCCESS
       }
       else -> {
