@@ -88,3 +88,4 @@ Evaluate hidden/dropped state, notes/comments, playback progress, and other capa
 ## S6 - Deeper decoupling (optional)
 
 Only after dual-backend tracking is stable, evaluate catalog decoupling and a provider-neutral local media key as separate migration projects.
+- [ ] Close the startup-speed gap to official 3.70.0: build a release-like QA variant and generate a fork-specific Baseline Profile. The installed official 3.70.0 APK contains `baseline.prof`/`baseline.profm`; current fork debug APKs do not and also run unminified with debug StrictMode/Timber.
