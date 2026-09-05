@@ -168,3 +168,12 @@ The custom-list slice was introduced in `26a3995`; `c4fdf30` fixed the suspend i
 ## Debug bridge QA trigger
 
 Debug builds now expose a shell-only QA broadcast receiver guarded by `android.permission.DUMP`. ADB shell can enqueue the normal full silent `TraktSyncWorker` using the action `${applicationId}.BRIDGE_SYNC`; production/release builds do not include this receiver. This exists to run repeatable bridge integration tests without unlocking the phone or automating foreground UI.
+
+
+## Controlled live bridge validation (2026-09-05)
+
+- Fork CI #43 (`33937077077`) on `dea10fd` passed ktlint, selected unit tests, Debug APK build, and artifact upload. The extracted APK SHA-256 is `dbbda91ff128baff26aaaba6f740de3287d7195067ce9893f2e5e22e447544ba`; it was installed successfully on CPH2573 as the debug package, with production Showly unchanged.
+- Custom Lists passed a disposable live-account matrix: creation in both directions, metadata latest-wins in both directions, member add/remove/re-add in both directions, and paired list deletion in both directions. All temporary list fixtures were removed afterward.
+- Watchlist passed Trakt -> Floppy add, Floppy -> Trakt delete, and Floppy -> Trakt re-add. A controlled Trakt-side delete exposed a legacy resurrection bug: the old watchlist importer leaves the stale local row behind and the old exporter re-adds it to Trakt before the bridge post-pass can observe the deletion, leaving the Floppy Planning row present.
+- The fix is to run the bidirectional watchlist resolver as a pre-pass, just like Custom Lists. `FloppyBridgeWatchlistRunner` already applies the resolved absence to Showly local watchlist state, so the legacy exporter no longer has stale local state to recreate after a remote deletion. The normal post-pass remains in place for same-run convergence.
+- History and Ratings still require controlled live deletion/re-add tests because their mature Trakt import/export paths may have analogous stale-local resurrection semantics and must not be assumed safe from the Watchlist result alone.

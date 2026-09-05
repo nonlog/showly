@@ -200,9 +200,10 @@ class TraktSyncWorker @AssistedInject constructor(
         eventsManager.sendEvent(TraktSyncStart)
 
         if (isImport || isExport) {
-          // Run list reconciliation before the mature Trakt list import/export path so
-          // a remote deletion is observed before the legacy exporter can recreate it.
+          // Reconcile domains whose mature Trakt import/export path is additive before
+          // that legacy path can recreate a remote deletion from stale Showly state.
           bridgeResults["lists-pre"] = runFloppyBridgeListsSync()
+          bridgeResults["watchlist-pre"] = runFloppyBridgeWatchlistSync()
         }
         if (isImport) {
           runImportWatched()
@@ -391,7 +392,7 @@ class TraktSyncWorker @AssistedInject constructor(
     val failed = results
       .filterValues { it == null }
       .keys
-      .map { if (it == "lists-pre") "lists" else it }
+      .map { it.removeSuffix("-pre") }
       .toSortedSet()
     val workManager = WorkManager.getInstance(applicationContext)
     if (failed.isNotEmpty()) {
