@@ -24,6 +24,8 @@ import androidx.work.workDataOf
 import com.michaldrabik.common.errors.ErrorHelper
 import com.michaldrabik.common.errors.ShowlyError
 import com.michaldrabik.common.extensions.nowUtcMillis
+import com.michaldrabik.data_local.LocalDataSource
+import com.michaldrabik.data_local.database.model.TraktSyncQueue
 import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.repository.UserTraktManager
 import com.michaldrabik.repository.bridge.BridgePrepassPolicy
@@ -38,6 +40,7 @@ import com.michaldrabik.ui_base.events.TraktSyncStart
 import com.michaldrabik.ui_base.events.TraktSyncSuccess
 import com.michaldrabik.ui_base.floppy.BridgeSyncExecutionGate
 import com.michaldrabik.ui_base.floppy.FloppyBridgeHistoryRunner
+import com.michaldrabik.ui_base.floppy.FloppyQuickSyncRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeListsRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeRatingsRunner
 import com.michaldrabik.ui_base.floppy.FloppyBridgeRetryWorker
@@ -50,6 +53,7 @@ import com.michaldrabik.ui_base.trakt.imports.TraktImportListsRunner
 import com.michaldrabik.ui_base.trakt.imports.TraktImportRatingsRunner
 import com.michaldrabik.ui_base.trakt.imports.TraktImportWatchedRunner
 import com.michaldrabik.ui_base.trakt.imports.TraktImportWatchlistRunner
+import com.michaldrabik.ui_base.trakt.quicksync.runners.QuickSyncRunner
 import com.michaldrabik.ui_base.trakt.receivers.ListLimitNotificationReceiver
 import com.michaldrabik.ui_base.trakt.receivers.ListLimitNotificationReceiver.Key.CUSTOM_LIST_NOTIFICATION_SNOOZED_AT
 import com.michaldrabik.ui_base.trakt.receivers.WatchlistLimitNotificationReceiver
@@ -82,6 +86,9 @@ class TraktSyncWorker @AssistedInject constructor(
   private val floppyBridgeListsRunner: FloppyBridgeListsRunner,
   private val floppyBridgeRatingsRunner: FloppyBridgeRatingsRunner,
   private val floppyBridgeWatchlistRunner: FloppyBridgeWatchlistRunner,
+  private val floppyQuickSyncRunner: FloppyQuickSyncRunner,
+  private val quickSyncRunner: QuickSyncRunner,
+  private val localSource: LocalDataSource,
   private val floppyRemoteDataSource: FloppyRemoteDataSource,
   private val bridgeRetryRepository: BridgeRetryRepository,
   private val userManager: UserTraktManager,
@@ -200,6 +207,15 @@ class TraktSyncWorker @AssistedInject constructor(
       try {
         eventsManager.sendEvent(TraktSyncStart)
 
+        // Local mutations are the third side of the bridge. Flush their durable
+        // provider acknowledgements before taking any remote snapshot, otherwise a
+        // full sync can observe both remotes as stale and resolve against the local
+        // change that was just made in Showly.
+        if (isExport || bridgeEnabled) {
+          val localChanges = flushLocalBridgeOutbox()
+          if (bridgeEnabled && localChanges > 0) bridgeResults["local"] = localChanges
+        }
+
         if (isImport || isExport) {
           // Reconcile domains whose mature Trakt import/export path is additive before
           // that legacy path can recreate a remote deletion from stale Showly state.
@@ -269,6 +285,45 @@ class TraktSyncWorker @AssistedInject constructor(
   override suspend fun getForegroundInfo(): ForegroundInfo {
     val notification = createProgressNotification(null)
     return ForegroundInfo(SYNC_NOTIFICATION_COMPLETE_PROGRESS_ID, notification)
+  }
+
+  private suspend fun flushLocalBridgeOutbox(): Int {
+    val sharedTypes = listOf(
+      TraktSyncQueue.Type.MOVIE,
+      TraktSyncQueue.Type.EPISODE,
+      TraktSyncQueue.Type.MOVIE_WATCHLIST,
+      TraktSyncQueue.Type.SHOW_WATCHLIST,
+    ).map(TraktSyncQueue.Type::slug)
+    val pendingBefore = localSource.traktSyncQueue
+      .getAll(sharedTypes)
+      .filter { !it.traktDone || !it.floppyDone }
+    if (pendingBefore.isEmpty()) return 0
+
+    var changes = 0
+    var firstError: Throwable? = null
+    try {
+      changes += floppyQuickSyncRunner.run()
+    } catch (error: Throwable) {
+      rethrowCancellation(error)
+      firstError = error
+      Timber.w(error, "Local Showly -> Floppy outbox flush failed before full bridge sync.")
+    }
+    try {
+      changes += quickSyncRunner.runBridgeMutations()
+    } catch (error: Throwable) {
+      rethrowCancellation(error)
+      if (firstError == null) firstError = error
+      Timber.w(error, "Local Showly -> Trakt outbox flush failed before full bridge sync.")
+    }
+
+    localSource.traktSyncQueue.deleteCompleted()
+    val stillPending = localSource.traktSyncQueue
+      .getAll(sharedTypes)
+      .any { !it.traktDone || !it.floppyDone }
+    if (stillPending) {
+      throw firstError ?: IllegalStateException("Local bridge outbox still has pending provider acknowledgements")
+    }
+    return changes
   }
 
   private suspend fun runImportWatched() {

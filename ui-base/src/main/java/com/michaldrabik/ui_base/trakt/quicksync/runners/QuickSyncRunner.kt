@@ -50,15 +50,18 @@ class QuickSyncRunner @Inject constructor(
 
   override suspend fun run(): Int {
     Timber.d("Initialized.")
-    checkAuthorization()
+    val bridgeCount = runBridgeMutations()
     val moviesEnabled = settingsRepository.isMoviesEnabled
-
-    val historyCount = exportHistoryItems(moviesEnabled)
-    val watchlistCount = exportWatchlistItems(moviesEnabled)
     val hiddenCount = exportHiddenItems(moviesEnabled)
 
     Timber.d("Finished with success.")
-    return historyCount + watchlistCount + hiddenCount
+    return bridgeCount + hiddenCount
+  }
+
+  suspend fun runBridgeMutations(): Int {
+    checkAuthorization()
+    val moviesEnabled = settingsRepository.isMoviesEnabled
+    return exportHistoryItems(moviesEnabled) + exportWatchlistItems(moviesEnabled)
   }
 
   private suspend fun exportHistoryItems(
