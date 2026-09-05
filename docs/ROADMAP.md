@@ -88,4 +88,4 @@ Evaluate hidden/dropped state, notes/comments, playback progress, and other capa
 ## S6 - Deeper decoupling (optional)
 
 Only after dual-backend tracking is stable, evaluate catalog decoupling and a provider-neutral local media key as separate migration projects.
-- [ ] Close the startup-speed gap to official 3.70.0: release-like QA is verified in CI #55 and a fork-specific 24,013-rule Baseline Profile was generated in manual run `33977099973`. Rebuild QA with the committed profile, then perform same-device cold-start A/B against official 3.70.0.
+- [ ] Close the startup-speed gap to official 3.70.0: release-like QA is verified in CI #58 with the committed 24,013-rule fork Baseline Profile compiled into the APK (`baseline.prof` 15,044 bytes). Perform same-device cold-start A/B against the current fork Debug and official 3.70.0; device validation is blocked only by the temporarily unavailable Windows/ADB connector.

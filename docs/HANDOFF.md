@@ -236,3 +236,9 @@ Fork CI #55 on `5e6fbaf` verified the first startup-performance layer: lint, uni
 Manual Fork CI run `33977099973` on `a0ce142` completed successfully. The Gradle Managed Device collected 24,013 rules into both `baseline-prof.txt` and `startup-prof.txt`; about 5,312 rules reference `com/michaldrabik/*`, including `App.onCreate`, the main activity path, Hilt, Room, and WorkManager startup code. The generated fork-specific rules are committed under `app/src/main/generated/baselineProfiles/` and will be compiled into subsequent release/QA builds together with `dexLayoutOptimization = true`.
 
 The first QA artifact from CI #55 proved the release-like variant builds successfully and shrinks from ~17 MB Debug to 6.1 MB QA. That #55 artifact only contained dependency/merged profiles; the next QA build is the first one that will contain the generated Showly startup profile. Device A/B startup measurement remains pending because the Windows/ADB tunnel is currently unavailable.
+
+## Release-like QA with fork profile verified
+
+Fork CI #58 (`33977897124`) on `2e28a12` passed lint, all selected unit tests, Debug APK, and the release-like QA APK. The final QA APK is 6,543,513 bytes with SHA-256 `27f74ff8b014f6bc2437459e5003cb23239975983fa575a0d1591f5a1f340cbd`. Its packaged `assets/dexopt/baseline.prof` is 15,044 bytes (up from 3,751 bytes in the pre-app-profile #55 QA) and `baseline.profm` is 348 bytes, confirming the generated Showly startup profile is actually compiled into the APK rather than merely stored in the repository.
+
+The next required validation is same-device startup A/B: current fork Debug -> official 3.70.0 -> profiled QA, preserving the `.debugoss` data if installation succeeds. The Windows/ADB connector is currently unavailable, so no device install or timing claim has been made yet.
