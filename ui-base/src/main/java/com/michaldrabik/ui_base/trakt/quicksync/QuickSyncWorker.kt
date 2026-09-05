@@ -24,6 +24,7 @@ import com.michaldrabik.common.errors.ShowlyError.UnauthorizedError
 import com.michaldrabik.common.extensions.nowUtcMillis
 import com.michaldrabik.data_local.LocalDataSource
 import com.michaldrabik.repository.UserTraktManager
+import com.michaldrabik.ui_base.floppy.BridgeSyncExecutionGate
 import com.michaldrabik.ui_base.floppy.FloppyQuickSyncRunner
 import com.michaldrabik.ui_base.Logger
 import com.michaldrabik.ui_base.R
@@ -40,6 +41,7 @@ import com.michaldrabik.ui_base.trakt.receivers.ListLimitNotificationReceiver.Ke
 import com.michaldrabik.ui_base.utilities.extensions.notificationManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.util.concurrent.TimeUnit.SECONDS
 import javax.inject.Named
@@ -81,53 +83,54 @@ class QuickSyncWorker @AssistedInject constructor(
     }
   }
 
-  override suspend fun doWork(): Result {
-    Timber.d("Initialized.")
-    notificationManager().notify(
-      SYNC_NOTIFICATION_PROGRESS_ID,
-      createProgressNotification(null),
-    )
+  override suspend fun doWork(): Result =
+    BridgeSyncExecutionGate.mutex.withLock {
+      Timber.d("Initialized.")
+      notificationManager().notify(
+        SYNC_NOTIFICATION_PROGRESS_ID,
+        createProgressNotification(null),
+      )
 
-    var count = 0
-    val errors = mutableListOf<Throwable>()
-    try {
+      var count = 0
+      val errors = mutableListOf<Throwable>()
       try {
-        count += floppyQuickSyncRunner.run()
-      } catch (error: Throwable) {
-        errors += error
-        Timber.w(error, "Showly -> Floppy QuickSync failed; Trakt will still be attempted.")
-      }
-
-      try {
-        count += quickSyncRunner.run()
-        count += quickSyncListsRunner.run()
-      } catch (error: Throwable) {
-        errors += error
-        Timber.w(error, "Showly -> Trakt QuickSync failed; Floppy acknowledgement is retained.")
-      }
-
-      localSource.traktSyncQueue.deleteCompleted()
-      if (count > 0) {
-        eventsManager.sendEvent(TraktQuickSyncSuccess(count))
-      }
-
-      if (errors.isEmpty()) return Result.success()
-
-      val terminalError = errors.firstOrNull { error ->
-        when (ErrorHelper.parse(error)) {
-          is CoroutineCancellation, is UnauthorizedError, is AccountLimitsError -> true
-          else -> false
+        try {
+          count += floppyQuickSyncRunner.run()
+        } catch (error: Throwable) {
+          errors += error
+          Timber.w(error, "Showly -> Floppy QuickSync failed; Trakt will still be attempted.")
         }
+
+        try {
+          count += quickSyncRunner.run()
+          count += quickSyncListsRunner.run()
+        } catch (error: Throwable) {
+          errors += error
+          Timber.w(error, "Showly -> Trakt QuickSync failed; Floppy acknowledgement is retained.")
+        }
+
+        localSource.traktSyncQueue.deleteCompleted()
+        if (count > 0) {
+          eventsManager.sendEvent(TraktQuickSyncSuccess(count))
+        }
+
+        if (errors.isEmpty()) return@withLock Result.success()
+
+        val terminalError = errors.firstOrNull { error ->
+          when (ErrorHelper.parse(error)) {
+            is CoroutineCancellation, is UnauthorizedError, is AccountLimitsError -> true
+            else -> false
+          }
+        }
+        val reportedError = terminalError ?: errors.first()
+        handleError(reportedError)
+        return@withLock if (terminalError != null) Result.failure() else Result.retry()
+      } finally {
+        clearRunners()
+        notificationManager().cancel(SYNC_NOTIFICATION_PROGRESS_ID)
+        Timber.d("Quick Sync completed.")
       }
-      val reportedError = terminalError ?: errors.first()
-      handleError(reportedError)
-      return if (terminalError != null) Result.failure() else Result.retry()
-    } finally {
-      clearRunners()
-      notificationManager().cancel(SYNC_NOTIFICATION_PROGRESS_ID)
-      Timber.d("Quick Sync completed.")
     }
-  }
 
   private suspend fun handleError(error: Throwable) {
     val showlyError = ErrorHelper.parse(error)

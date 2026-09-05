@@ -72,7 +72,7 @@ class FloppyQuickSyncRunner @Inject constructor(
 
   private suspend fun syncMovieHistory(item: TraktSyncQueue): Int {
     val movie = localSource.movies.getById(item.idTrakt)
-    val tmdbId = movie?.idTmdb?.takeIf { it > 0 } ?: return skipMissingIdentity(item)
+    val tmdbId = movie?.idTmdb?.takeIf { it > 0 } ?: missingIdentity(item)
 
     return when (item.operation) {
       Operation.REMOVE.slug -> {
@@ -87,8 +87,8 @@ class FloppyQuickSyncRunner @Inject constructor(
 
   private suspend fun syncEpisodeHistory(item: TraktSyncQueue): Int {
     val episode = localSource.episodes.getAll(listOf(item.idTrakt)).firstOrNull()
-      ?: return skipMissingIdentity(item)
-    val showTmdbId = episode.idShowTmdb.takeIf { it > 0 } ?: return skipMissingIdentity(item)
+      ?: missingIdentity(item)
+    val showTmdbId = episode.idShowTmdb.takeIf { it > 0 } ?: missingIdentity(item)
 
     return when (item.operation) {
       Operation.REMOVE.slug -> {
@@ -124,7 +124,7 @@ class FloppyQuickSyncRunner @Inject constructor(
     val tmdbId = when (type) {
       FloppyWatchlistType.MOVIES -> localSource.movies.getById(item.idTrakt)?.idTmdb
       FloppyWatchlistType.SHOWS -> localSource.shows.getById(item.idTrakt)?.idTmdb
-    }?.takeIf { it > 0 } ?: return skipMissingIdentity(item)
+    }?.takeIf { it > 0 } ?: missingIdentity(item)
 
     return when (item.operation) {
       Operation.REMOVE.slug -> {
@@ -137,8 +137,7 @@ class FloppyQuickSyncRunner @Inject constructor(
     }
   }
 
-  private fun skipMissingIdentity(item: TraktSyncQueue): Int {
-    Timber.w("Skipping Showly -> Floppy QuickSync item without TMDB identity: ${item.type}#${item.idTrakt}")
-    return 0
+  private fun missingIdentity(item: TraktSyncQueue): Nothing {
+    error("Showly -> Floppy QuickSync is missing TMDB identity for ${item.type}#${item.idTrakt}")
   }
 }

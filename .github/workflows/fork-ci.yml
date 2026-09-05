@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          ./gradlew --no-daemon --stacktrace             :app:testDebugUnitTest             :data-remote:testDebugUnitTest             :repository:testDebugUnitTest             :ui-discover:testDebugUnitTest             :ui-trakt-sync:testDebugUnitTest             :ui-statistics:testDebugUnitTest             :ui-statistics-movies:testDebugUnitTest             :ui-search:testDebugUnitTest             :ui-progress-movies:testDebugUnitTest 2>&1 | tee unit-tests.log
+          ./gradlew --no-daemon --stacktrace             :app:testDebugUnitTest             :data-local:testDebugUnitTest             :data-remote:testDebugUnitTest             :repository:testDebugUnitTest             :ui-discover:testDebugUnitTest             :ui-trakt-sync:testDebugUnitTest             :ui-statistics:testDebugUnitTest             :ui-statistics-movies:testDebugUnitTest             :ui-search:testDebugUnitTest             :ui-progress-movies:testDebugUnitTest 2>&1 | tee unit-tests.log
           status=${PIPESTATUS[0]}
           set -e
           if [[ "$status" -ne 0 ]]; then
