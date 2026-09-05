@@ -217,3 +217,14 @@ The user provided a JADX/decompiled tree from the installed official 3.70.0 APK 
 - Do not copy the official 3.70.0 baseline profile into the fork: profile entries/metadata are tied to that APK's dex layout. Generate a fork-specific baseline profile instead.
 
 Next startup-performance work should create a release-like independently installable QA variant and a Baseline Profile/Macrobenchmark generation path, then compare cold-start `am start -W` against official 3.70.0 once ADB is online.
+
+## Startup performance remediation in progress
+
+A release-like QA path and fork-owned Baseline Profile generation path are now being introduced based on the official 3.70.0 APK audit:
+
+- `qa` inherits the release build type, keeps R8/minification enabled, runs with `BuildConfig.DEBUG=false`, and uses the existing `.debugoss` application id plus debug signing so it can replace the current fork debug install without touching production Showly or losing the fork's local data.
+- A `:baselineprofile` `com.android.test` producer targets `:app` and records the startup critical path with `BaselineProfileRule`.
+- Generated profile rules are configured to merge into `src/main`, so both release and release-like QA builds can consume the fork-specific profile after it is generated and committed.
+- Fork CI now builds both debug and QA artifacts. A separate manually-triggered workflow generates the profile on an AOSP Gradle Managed Device and uploads the generated rules for review/commit.
+
+Do not copy the official 3.70.0 `baseline.prof`: generate and commit the fork-specific rules, then compare cold startup on the same device/data using the QA build.

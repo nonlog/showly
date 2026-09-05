@@ -1,0 +1,74 @@
+name: Generate Baseline Profile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Enable KVM
+        run: sudo chmod 666 /dev/kvm
+
+      - name: Prepare fork build configuration
+        shell: bash
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TMDB_READ_ACCESS_TOKEN: ${{ secrets.TMDB_READ_ACCESS_TOKEN }}
+        run: |
+          umask 077
+          cat > local.properties <<EOF
+          traktClientId="${TRAKT_CLIENT_ID:-ci-placeholder}"
+          traktClientSecret="${TRAKT_CLIENT_SECRET:-ci-placeholder}"
+          tmdbApiKey="${TMDB_READ_ACCESS_TOKEN:-ci-placeholder}"
+          omdbApiKey="ci-placeholder"
+          EOF
+          keytool -genkeypair -v \
+            -keystore app/keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Showly Baseline Profile,OU=CI,O=nonlog,L=CI,S=CI,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+          cat > app/keystore.properties <<'EOF'
+          storePassword=android
+          keyPassword=android
+          keyAlias=androiddebugkey
+          EOF
+
+      - name: Generate Baseline Profile
+        run: >-
+          ./gradlew --no-daemon --stacktrace :app:generateBaselineProfile
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=BaselineProfile
+
+      - name: Verify generated profile
+        shell: bash
+        run: |
+          profile="app/src/main/generated/baselineProfiles/baseline-prof.txt"
+          test -s "$profile"
+          echo "Generated $(wc -l < "$profile") baseline profile rules."
+
+      - name: Upload generated profile
+        uses: actions/upload-artifact@v7
+        with:
+          name: showly-baseline-profile-${{ github.sha }}
+          path: app/src/main/generated/baselineProfiles/baseline-prof.txt
+          if-no-files-found: error
+          retention-days: 14

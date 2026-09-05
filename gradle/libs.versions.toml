@@ -36,6 +36,9 @@ swiperefreshlayout = "1.2.0"
 timber = "5.0.1"
 truth = "1.4.5"
 work-runtime-ktx = "2.11.2"
+baselineProfile = "1.4.1"
+uiautomator = "2.3.0"
+junit4 = "4.13.2"
 
 [libraries]
 
@@ -95,6 +98,9 @@ android-test-core = { group = "androidx.arch.core", name = "core-testing", versi
 # Android Testing
 android-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidTestRunner" }
 android-test-truth = { group = "androidx.test.ext", name = "truth", version.ref = "androidTestTruth" }
+android-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+android-benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "baselineProfile" }
+android-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 
 [bundles]
 

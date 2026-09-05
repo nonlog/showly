@@ -3,6 +3,7 @@ plugins {
   id 'kotlin-android'
   id 'com.google.devtools.ksp'
   id 'dagger.hilt.android.plugin'
+  id 'androidx.baselineprofile'
 }
 
 apply from: '../versions.gradle'
@@ -72,6 +73,19 @@ android {
           appIconRound: "@mipmap/ic_launcher_round"
       ]
     }
+    qa {
+      initWith release
+      applicationIdSuffix '.debugoss'
+      versionNameSuffix '-qa'
+      signingConfig signingConfigs.debug
+      matchingFallbacks = ['release']
+    }
+  }
+
+  baselineProfile {
+    mergeIntoMain = true
+    saveInSrc = true
+    automaticGenerationDuringBuild = false
   }
 
   lint {
@@ -90,6 +104,7 @@ android {
 }
 
 dependencies {
+  baselineProfile project(':baselineprofile')
   implementation project(':common')
   implementation project(':data-remote')
   implementation project(':data-local')
