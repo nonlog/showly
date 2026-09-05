@@ -230,3 +230,9 @@ A release-like QA path and fork-owned Baseline Profile generation path are now b
 Do not copy the official 3.70.0 `baseline.prof`: generate and commit the fork-specific rules, then compare cold startup on the same device/data using the QA build.
 
 Fork CI #55 on `5e6fbaf` verified the first startup-performance layer: lint, unit tests, normal Debug APK, and the new R8 `qa` APK all passed. The QA artifact is 6,333,214 bytes with SHA-256 `b9d1088a9acdf56cf4b536c6721f63ba1500c1a97b31a26a14faff4426bfd497`, versus ~17 MB for the unminified Debug APK. It already packages dependency/merged `assets/dexopt/baseline.prof` and `baseline.profm`; these are not yet the generated Showly startup rules. The next step is generating the fork-specific app profile and rebuilding QA with it.
+
+## Fork Baseline Profile generated
+
+Manual Fork CI run `33977099973` on `a0ce142` completed successfully. The Gradle Managed Device collected 24,013 rules into both `baseline-prof.txt` and `startup-prof.txt`; about 5,312 rules reference `com/michaldrabik/*`, including `App.onCreate`, the main activity path, Hilt, Room, and WorkManager startup code. The generated fork-specific rules are committed under `app/src/main/generated/baselineProfiles/` and will be compiled into subsequent release/QA builds together with `dexLayoutOptimization = true`.
+
+The first QA artifact from CI #55 proved the release-like variant builds successfully and shrinks from ~17 MB Debug to 6.1 MB QA. That #55 artifact only contained dependency/merged profiles; the next QA build is the first one that will contain the generated Showly startup profile. Device A/B startup measurement remains pending because the Windows/ADB tunnel is currently unavailable.
