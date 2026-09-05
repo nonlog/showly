@@ -164,3 +164,7 @@ The custom-list slice was introduced in `26a3995`; `c4fdf30` fixed the suspend i
 - Local canonical identity remains Trakt-based for now; provider-neutral database migration is deferred.
 - Floppy integration boundaries prefer TMDB/TVDB/IMDb plus season/episode coordinates, never Floppy internal item ids.
 - Floppy-originated changes are now allowed only through the S4 bridge resolver/ledger. Do not add ad-hoc reverse writes that bypass its timestamp and tombstone rules.
+
+## Debug bridge QA trigger
+
+Debug builds now expose a shell-only QA broadcast receiver guarded by `android.permission.DUMP`. ADB shell can enqueue the normal full silent `TraktSyncWorker` using the action `${applicationId}.BRIDGE_SYNC`; production/release builds do not include this receiver. This exists to run repeatable bridge integration tests without unlocking the phone or automating foreground UI.
