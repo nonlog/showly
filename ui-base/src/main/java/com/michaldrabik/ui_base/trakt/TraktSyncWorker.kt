@@ -226,7 +226,12 @@ class TraktSyncWorker @AssistedInject constructor(
         }
         if (isImport) {
           runImportWatched()
-          runImportWatchlist()
+          // A successful Watchlist bridge pre-pass already reconciles both remotes
+          // and Showly local state. Avoid immediately fetching the same Trakt
+          // Watchlist again through the mature importer.
+          if (!bridgeEnabled || bridgeResults["watchlist-pre"] == null) {
+            runImportWatchlist()
+          }
           runImportLists()
           runImportRatings()
         }

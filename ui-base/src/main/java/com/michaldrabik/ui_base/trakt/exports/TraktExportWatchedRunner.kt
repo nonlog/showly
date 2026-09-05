@@ -139,7 +139,6 @@ class TraktExportWatchedRunner @Inject constructor(
       Timber.d("Nothing to export. Skipping...")
     }
 
-    delay(TRAKT_LIMIT_DELAY_MS)
     exportHidden()
   }
 

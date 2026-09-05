@@ -81,6 +81,12 @@ private data class FloppyHttpResponse(
   val body: String,
 )
 
+private data class FloppyConnectionValidationCache(
+  val config: FloppyConfig,
+  val status: FloppyConnectionStatus,
+  val checkedAt: Long,
+)
+
 interface FloppyRemoteDataSource {
   fun getConfig(): FloppyConfig
 
@@ -93,7 +99,10 @@ interface FloppyRemoteDataSource {
     historyId: Long,
   )
 
-  suspend fun validateConnection(config: FloppyConfig): FloppyConnectionStatus
+  suspend fun validateConnection(
+    config: FloppyConfig,
+    force: Boolean = false,
+  ): FloppyConnectionStatus
 
   suspend fun ensureMovieHistory(
     tmdbId: Long,
@@ -136,8 +145,11 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     private const val KEY_WATCHLIST_MOVIES = "FLOPPY_WATCHLIST_MOVIES_OWNERSHIP"
     private const val KEY_WATCHLIST_SHOWS = "FLOPPY_WATCHLIST_SHOWS_OWNERSHIP"
     private const val STATUS_PLANNING = 0
+    private const val CONNECTION_VALIDATION_CACHE_MS = 60_000L
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
   }
+
+  @Volatile private var connectionValidationCache: FloppyConnectionValidationCache? = null
 
   private val mediaDetailAdapter = moshi.adapter(FloppyMediaDetail::class.java)
   private val movieHistoryAdapter = moshi.adapter(FloppyMovieHistoryRequest::class.java)
@@ -153,6 +165,7 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     )
 
   override fun saveConfig(config: FloppyConfig) {
+    connectionValidationCache = null
     val previous = getConfig()
     val identityChanged = isFloppyIdentityChanged(previous, config)
     preferences
@@ -180,7 +193,24 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     preferences.edit().putLong(type.checkpointKey(), historyId).apply()
   }
 
-  override suspend fun validateConnection(config: FloppyConfig): FloppyConnectionStatus {
+  override suspend fun validateConnection(
+    config: FloppyConfig,
+    force: Boolean,
+  ): FloppyConnectionStatus {
+    val checkedAt = System.currentTimeMillis()
+    connectionValidationCache
+      ?.takeIf { cache ->
+        !force &&
+          cache.config == config &&
+          checkedAt - cache.checkedAt in 0..CONNECTION_VALIDATION_CACHE_MS
+      }?.let { return it.status }
+
+    val status = validateConnectionFresh(config)
+    connectionValidationCache = FloppyConnectionValidationCache(config, status, checkedAt)
+    return status
+  }
+
+  private suspend fun validateConnectionFresh(config: FloppyConfig): FloppyConnectionStatus {
     if (!config.enabled) return FloppyConnectionStatus.DISABLED
     val baseUrl = try {
       normalizeFloppyBaseUrl(config.baseUrl)

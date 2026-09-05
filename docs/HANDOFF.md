@@ -7,7 +7,7 @@ Last updated: 2026-09-05
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `1fa4729f330a8b94a752b2eaeedb936f139e369d` (`fix: flush local outbox before bridge snapshots`).
+- Latest fully verified code head: `00462bc401fc551dae669a200224a455851f798a` (`fix: persist episode bridge identity`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -45,6 +45,9 @@ Last updated: 2026-09-05
 - Run #48 (`33945849234`) on `ddb7fd7` completed successfully: ktlint, unit tests, schema-44 Room/Hilt compilation, Debug APK build, and artifact upload all passed. This verifies the first local History/Watchlist two-provider outbox implementation plus removal of the duplicate History/Watchlist post-pass and the Floppy History N+1 scan.
 - Run #49 (`33946252530`) on `c0dc9d1` completed successfully after Fork CI was expanded to run `:data-local:testDebugUnitTest`; it verifies independent provider acknowledgements, shared bridge/QuickSync serialization, and pending preservation when TMDB identity cannot be resolved.
 - Run #50 (`33946637834`) on `1fa4729` completed successfully: ktlint, all selected unit tests, Debug APK build, and artifact upload passed. This is the verified baseline where a manual/periodic full sync drains pending Showly-local History/Watchlist mutations to both providers before taking bridge snapshots.
+- Run #53 (`33947537911`) on `00462bc` completed successfully: ktlint, all selected unit tests including the schema-44 provider-identity outbox coverage, Debug APK build, and artifact upload all passed. Artifact `showly-debug-00462bc401fc551dae669a200224a455851f798a` is 15,587,903 bytes with GitHub digest `sha256:bb7f5e6c2674572b4ab88c47fd186357585396141803551affc9695989e1c3ef`; extracted APK is 17,392,405 bytes with SHA-256 `c4633297892065c96e0bcb979f28acc03dc9b1f77d9e6d16a5950119720c3bb5`. It was installed successfully on CPH2573 as the debug package; production Showly remained unchanged.
+- On-device schema-44 validation passed after the #53 install. The database opened at user version 44 with all 12 outbox columns (`trakt_done`, `floppy_done`, `media_tmdb_id`, `season_number`, `episode_number` included). The 43 -> 44 recovery seed automatically queued the two legacy local-only House of the Dragon episodes and QuickSync drained the queue without a full manual bridge run. The previously missing S1E1/S1E2 are now present exactly once in both Trakt and Floppy; S1E2 `last_exported_at` changed from NULL to a fresh export timestamp and the outbox returned to empty.
+- A real full bridge timing re-test on #53 completed successfully with no failed domains in about 40.1 seconds (`KEY_LAST_FLOPPY_BRIDGE_ATTEMPT=1788587319599`, success `1788587359731`), down from the previous ~65.3 seconds (~39% faster). The History N+1 and duplicate History/Watchlist post-pass removals are therefore materially effective, but ~40 seconds is still longer than desired.
 
 ## Completed fork work
 
@@ -86,6 +89,7 @@ Implemented in the current working tree:
 - **Quick-sync failure safety (working tree after #47):** Floppy and Trakt are attempted independently. Successful provider acknowledgements are durable and completed rows are deleted only after both providers acknowledge them. Generic failures use WorkManager exponential retry; a failure on one side no longer prevents the other side from receiving the local mutation. Local QuickSync now shares `BridgeSyncExecutionGate` with full bridge/retry workers to prevent concurrent remote/ledger mutation. A missing TMDB identity is left pending by failing the Floppy acknowledgement rather than being falsely marked complete.
 - **Full-sync ordering (follow-up working tree):** a manual/periodic full sync drains any pending local History/Watchlist outbox rows to both remotes before the bridge takes remote snapshots. If either provider acknowledgement remains pending, full remote reconciliation stops instead of allowing stale remote state to overwrite a just-made Showly mutation. This closes the race where the user adds locally and immediately presses `Sync Trakt ↔ Floppy now` before the delayed QuickSync worker runs.
 - **Full-sync performance (working tree after #47):** History and Watchlist no longer repeat a second full bridge post-pass after the legacy Trakt import/export phase. Floppy History also no longer performs the old flat-catalog + one-detail-request-per-identity N+1 scan: the fork's `flat=1` history payload already exposes `instance_id`, `played_at_local`, parent TMDB `media_id`, and episode coordinates, so the bridge constructs exact movie/episode events directly from paginated flat history. Ratings and Custom Lists still retain their post-pass until equivalent local fast paths are migrated.
+- **Full-sync performance follow-up (working tree after #53):** each bridge runner currently calls `validateConnection`, which costs two Floppy HTTP requests (`/info/` + authenticated `/user/preferences/`); one full run can repeat this many times. The next patch adds a 60-second in-memory validation cache keyed by the exact Floppy config while keeping the Settings “Test connection” action forced/fresh. A successful Watchlist bridge pre-pass also makes the mature Watchlist import/export duplicate work, so that duplicate path is skipped only when the pre-pass succeeded; if the bridge pre-pass failed, mature import still runs and legacy export stays blocked by the existing safety policy. The unconditional 1.25-second wait before hidden-item export is also removed when the watched exporter has already completed its own rate-limit pacing.
 
 Custom-list migration verified at `89fe98e`:
 
@@ -111,7 +115,7 @@ Fork CI #42 verifies the durable retry layer:
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
 - S1: Floppy settings screen against a real user API token.
 - S2: on-device bootstrap test against the configured Floppy account. GitHub CI verification for the current integrated branch is tracked above.
-- Device install baseline: CI #47 debug APK is installed. CI #44 already passed the controlled Watchlist regression re-test; production Showly remains untouched.
+- Device install baseline: CI #53 debug APK is installed and has passed schema-44 recovery plus real Trakt/Floppy verification for the previously missing S1E1/S1E2 history. Production Showly remains untouched.
 
 ## S3 active design: watchlist mirroring
 
@@ -145,10 +149,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Verify the final schema-44 provider-identity outbox, queue-before-delete episode removal path, parent-show TMDB fix, all-watched-episodes exporter, and local scheduling gates in Fork CI.
-2. Install only that consolidated Debug APK. Confirm Room schema 44/12 outbox columns, verify migration-seeded S1E1/S1E2 drain automatically, and confirm the reported S1E2 appears in both Trakt and Floppy.
-3. Run disposable local UI-origin tests with legacy `trakt_quick_sync_enabled=0`: add/remove an unfollowed-show episode History event and add/remove a movie Watchlist item. Both directions should reach Trakt and Floppy without a full manual sync; measure latency.
-4. Re-run one manual full bridge sync and compare wall time against the prior ~65.3 s baseline. Optimize Ratings/Custom Lists only if the reduced pipeline is still materially slow.
+1. Verify the post-#53 full-sync request-reduction patch (Floppy connection-validation reuse, duplicate mature Watchlist skip after a successful bridge pre-pass, and redundant watched-export delay removal) in Fork CI, install it, then re-measure against the #53 40.1 s baseline.
+2. Validate one new local Watchlist add/remove and one new unfollowed-show episode add/remove with legacy `trakt_quick_sync_enabled=0`; the #53 migration/recovery path already proved the two-provider outbox itself works and delivered the user's previously missing S1E1/S1E2 to both remotes.
+3. If full sync is still materially above ~30 seconds, profile the remaining Ratings/Custom Lists mature+bridge duplication before changing semantics.
+4. Resume the Ratings/History deletion/re-add conflict matrix after the local-origin regression and performance work are closed.
 
 ## Historical S3 rating finding (superseded by S4)
 

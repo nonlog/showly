@@ -129,7 +129,7 @@ class SettingsFloppyViewModel @Inject constructor(
   private suspend fun testConnection(config: FloppyConfig) {
     testingState.value = true
     try {
-      statusState.value = floppyRemoteDataSource.validateConnection(config)
+      statusState.value = floppyRemoteDataSource.validateConnection(config, force = true)
     } finally {
       testingState.value = false
     }
