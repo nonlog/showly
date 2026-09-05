@@ -75,4 +75,32 @@ class FloppyRemoteDataSourceTest {
     assertEquals(null, decodeFloppyWatchlistOwnership("603:0"))
     assertEquals(null, decodeFloppyWatchlistOwnership("movie:42"))
   }
+
+  @Test
+  fun `creates score-only rating row when media has no consumption`() {
+    assertEquals(
+      FloppyRatingWriteAction.CREATE,
+      resolveFloppyRatingWriteAction(hasConsumption = false, score = 7.0),
+    )
+  }
+
+  @Test
+  fun `rating removal without consumption is a no-op`() {
+    assertEquals(
+      FloppyRatingWriteAction.NOOP,
+      resolveFloppyRatingWriteAction(hasConsumption = false, score = null),
+    )
+  }
+
+  @Test
+  fun `existing consumption uses rating patch`() {
+    assertEquals(
+      FloppyRatingWriteAction.PATCH,
+      resolveFloppyRatingWriteAction(hasConsumption = true, score = 7.0),
+    )
+    assertEquals(
+      FloppyRatingWriteAction.PATCH,
+      resolveFloppyRatingWriteAction(hasConsumption = true, score = null),
+    )
+  }
 }

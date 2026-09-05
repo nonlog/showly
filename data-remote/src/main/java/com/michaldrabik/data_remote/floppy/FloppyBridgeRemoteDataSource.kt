@@ -131,6 +131,22 @@ private data class FloppyBridgeHttpResponse(
   val body: String,
 )
 
+internal enum class FloppyRatingWriteAction {
+  CREATE,
+  PATCH,
+  NOOP,
+}
+
+internal fun resolveFloppyRatingWriteAction(
+  hasConsumption: Boolean,
+  score: Double?,
+): FloppyRatingWriteAction =
+  when {
+    hasConsumption -> FloppyRatingWriteAction.PATCH
+    score != null -> FloppyRatingWriteAction.CREATE
+    else -> FloppyRatingWriteAction.NOOP
+  }
+
 interface FloppyBridgeRemoteDataSource {
   suspend fun fetchHistoryIdentities(): List<FloppyBridgeHistoryIdentity>
 
@@ -314,37 +330,50 @@ internal class DefaultFloppyBridgeRemoteDataSource @Inject constructor(
     val detailUrl = "$baseUrl/api/v1/media/$mediaType/tmdb/$tmdbId/"
     val detail = executeRequest(authenticatedRequestBuilder(detailUrl, config.apiKey).get().build())
 
-    if (detail.code == 404) {
-      if (score == null) return false
-      val body = ratingCreateAdapter
-        .toJson(FloppyBridgeRatingCreateRequest(mediaId = tmdbId, score = score))
-        .toRequestBody(JSON_MEDIA_TYPE)
-      val response = executeRequest(
-        authenticatedRequestBuilder("$baseUrl/api/v1/media/$mediaType/", config.apiKey)
-          .post(body)
-          .build(),
-      )
-      if (response.code !in 200..299) {
-        throw IOException("Floppy bridge rating create failed with HTTP " + response.code)
+    val hasConsumption = when {
+      detail.code == 404 -> false
+      detail.code in 200..299 -> {
+        val mediaDetail = try {
+          detailAdapter.fromJson(detail.body)
+        } catch (error: Exception) {
+          throw IOException("Unable to parse Floppy bridge rating detail", error)
+        } ?: throw IOException("Floppy bridge rating detail was empty")
+        mediaDetail.consumptions.isNotEmpty()
       }
-      return true
-    }
-    if (detail.code !in 200..299) {
-      throw IOException("Floppy bridge rating detail failed with HTTP " + detail.code)
+      else -> throw IOException("Floppy bridge rating detail failed with HTTP " + detail.code)
     }
 
-    val body = ratingUpdateAdapter
-      .toJson(FloppyBridgeRatingUpdateRequest(score))
-      .toRequestBody(JSON_MEDIA_TYPE)
-    val response = executeRequest(
-      authenticatedRequestBuilder(detailUrl, config.apiKey)
-        .patch(body)
-        .build(),
-    )
-    if (response.code !in 200..299) {
-      throw IOException("Floppy bridge rating update failed with HTTP " + response.code)
+    return when (resolveFloppyRatingWriteAction(hasConsumption, score)) {
+      FloppyRatingWriteAction.NOOP -> false
+      FloppyRatingWriteAction.CREATE -> {
+        val body = ratingCreateAdapter
+          .toJson(FloppyBridgeRatingCreateRequest(mediaId = tmdbId, score = score))
+          .toRequestBody(JSON_MEDIA_TYPE)
+        val response = executeRequest(
+          authenticatedRequestBuilder("$baseUrl/api/v1/media/$mediaType/", config.apiKey)
+            .post(body)
+            .build(),
+        )
+        if (response.code !in 200..299) {
+          throw IOException("Floppy bridge rating create failed with HTTP " + response.code)
+        }
+        true
+      }
+      FloppyRatingWriteAction.PATCH -> {
+        val body = ratingUpdateAdapter
+          .toJson(FloppyBridgeRatingUpdateRequest(score))
+          .toRequestBody(JSON_MEDIA_TYPE)
+        val response = executeRequest(
+          authenticatedRequestBuilder(detailUrl, config.apiKey)
+            .patch(body)
+            .build(),
+        )
+        if (response.code !in 200..299) {
+          throw IOException("Floppy bridge rating update failed with HTTP " + response.code)
+        }
+        true
+      }
     }
-    return true
   }
 
   override suspend fun removeHistoryEvent(event: FloppyBridgeHistoryEvent): Boolean {
