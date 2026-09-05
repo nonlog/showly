@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: fork-ci-${{ github.workflow }}-${{ github.ref }}
+  group: fork-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.generate_baseline_profile && 'profile' || 'ci' }}
   cancel-in-progress: true
 
 jobs:
