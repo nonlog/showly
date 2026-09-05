@@ -7,7 +7,7 @@ Last updated: 2026-09-05
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `0d64c7f3cda4a4d2b67916d8e35dd9cc3bb0eac1` (`test: cover bridge conflict matrix`).
+- Latest fully verified code head: `a373abe171f3f3a6210706c2d71e895ecf78a272` (`feat: add durable bridge retries`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -35,6 +35,8 @@ Last updated: 2026-09-05
 - Run #39 (`33853342095`) on `e7e93bc` exposed one ktlint-only expression-body formatting issue after the worker mutex change and was then superseded/cancelled by the formatting-only follow-up. No functional failure was observed.
 - Run #40 (`33853551265`) on `15e2716` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-15e2716763249fefe97e40a1d3c2b08905218b83` is 15,546,446 bytes with SHA-256 `149cd90ff3ce842de362f1debe2899ad5b3f98dd839ab94ff818671b3c6f6943`; the extracted APK is 17,347,591 bytes with SHA-256 `872c095937b6c4bf5c4085547afd48047cafb082d991bd9c57a6f7cf134bba28`. It was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); production Showly remains `3.70.0` (`versionCode=840`). Temporary transfer files were removed.
 - Run #41 (`33854650796`) on `0d64c7f` completed successfully and verifies the expanded latest-wins conflict matrix: newer edits, deletions, re-adds in both directions, provider timestamps, observation-time fallback, exact ties, and first-absence protection.
+- Run #42 (`33935929026`) on `a373abe` completed successfully: ktlint, selected unit tests (including `BridgeRetryRepositoryTest`), Debug APK build, and artifact upload all passed. Artifact `showly-debug-a373abe171f3f3a6210706c2d71e895ecf78a272` is 15,566,812 bytes with SHA-256 `5311b31e2da278b92a31eb4aac2de2fc6782cd8ce346f8be85db6f49939fa8ef`; extracted APK is 17,367,261 bytes with SHA-256 `336ff266174e7081e805e8b5795803c79b04ed94cc3a8766d3e5d4bd0d7b99a6`.
+- The #42 APK was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); production `com.michaldrabik.showly2` remained `3.70.0` (`versionCode=840`). The debug app was launched once without screenshots or a manual sync to let Room open the database; device verification then confirmed schema 43, `bridge_retry_state` present with columns `domain`, `queued_at`, `attempt_count`, `last_attempt_at`, `last_error`, and zero pending retry rows. Temporary APK/database extraction files were removed.
 
 ## Completed fork work
 
@@ -83,13 +85,14 @@ Custom-list migration verified at `89fe98e`:
 
 Additional Floppy-only data (notes, playback progress, hidden/dropped semantics) stays outside the bridge until a clean Trakt mapping exists.
 
-The current working tree starts the durable retry layer (not yet a verified baseline):
+Fork CI #42 verifies the durable retry layer:
 
 - Room schema 43 adds `bridge_retry_state`, a durable per-domain retry queue with queued time, attempt count, last attempt, and sanitized last-error class.
 - A dedicated `FloppyBridgeRetryWorker` retries only failed bridge domains with WorkManager network constraints and exponential backoff instead of waiting for the next full Trakt sync. Automatic retries stop after four attempts while leaving the queue durable for the next manual/periodic run.
 - Full Trakt sync and bridge retry execution share one in-process mutex, so they cannot mutate the bridge ledger concurrently.
 - Successful full reconciliation clears stale retry entries; remote identity changes clear both the bridge ledger and retry queue.
 - The Floppy settings summary reads pending domains from Room so failures are visible as `history`, `watchlist`, `ratings`, or `lists` rather than only a generic last-run failure.
+- The #42 APK has also exercised the real on-device Room 42 -> 43 migration successfully.
 
 ## Validation still requiring a device/account
 
@@ -130,10 +133,10 @@ The watchlist slice is verified in commit `40532b0`:
 
 ## Immediate next steps
 
-1. Verify the schema-43 durable retry queue, retry worker, and pending-domain settings status in Fork CI.
-2. Install the resulting GitHub-built APK on CPH2573 and verify the 42 -> 43 Room migration without writing live Trakt/Floppy data.
-3. Perform controlled bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
-4. After live-domain behavior is proven, add item-level pending/conflict diagnostics only where domain-level retry is insufficient.
+1. Perform controlled bidirectional conflict tests for history/rewatches, watchlist, ratings, and Custom Lists, including deletion vs re-add and newer-vs-older mutations.
+2. Validate that a deliberately recoverable bridge-domain failure is queued in `bridge_retry_state`, retried by WorkManager, and cleared after convergence.
+3. After live-domain behavior is proven, add item-level pending/conflict diagnostics only where domain-level retry is insufficient.
+4. Re-evaluate S5 only for data with a clean semantic mapping between Trakt and Floppy.
 
 ## Historical S3 rating finding (superseded by S4)
 
