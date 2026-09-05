@@ -77,7 +77,7 @@
 - [x] Visually validate the redesigned credentials UI on-device (confirmed by user on 2026-09-05).
 - [x] Serialize manual/periodic full bridge runs and reset visible bridge status when the Floppy remote identity changes (verified in Fork CI #40).
 - [ ] Add per-domain pending/conflict detail beyond the current last-run summary. Pending-domain visibility is complete; item-level conflict detail remains deferred until live validation.
-- [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes. Custom Lists are complete; the Watchlist pre-pass fix is green in Fork CI #44 and awaits live re-test. Ratings/History stale-export hardening is implemented locally and awaits Fork CI/live validation.
+- [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes. Custom Lists and Watchlist are complete in controlled live tests; the Watchlist Trakt-deletion regression is fixed and verified on-device with CI #44. Ratings/History stale-export hardening awaits Fork CI/live validation.
 
 ## S5 - Additional user data
 

@@ -26,6 +26,7 @@ import com.michaldrabik.common.errors.ShowlyError
 import com.michaldrabik.common.extensions.nowUtcMillis
 import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
 import com.michaldrabik.repository.UserTraktManager
+import com.michaldrabik.repository.bridge.BridgePrepassPolicy
 import com.michaldrabik.repository.bridge.BridgeRetryRepository
 import com.michaldrabik.ui_base.Logger
 import com.michaldrabik.ui_base.R
@@ -214,10 +215,26 @@ class TraktSyncWorker @AssistedInject constructor(
           runImportRatings()
         }
         if (isExport) {
-          runExportWatched()
-          runExportWatchlist()
-          runExportLists()
-          runExportRatings()
+          if (BridgePrepassPolicy.canRunLegacyExport(bridgeEnabled, bridgeResults["history-pre"])) {
+            runExportWatched()
+          } else {
+            Timber.w("Skipping watched export because the History bridge pre-pass failed.")
+          }
+          if (BridgePrepassPolicy.canRunLegacyExport(bridgeEnabled, bridgeResults["watchlist-pre"])) {
+            runExportWatchlist()
+          } else {
+            Timber.w("Skipping watchlist export because the Watchlist bridge pre-pass failed.")
+          }
+          if (BridgePrepassPolicy.canRunLegacyExport(bridgeEnabled, bridgeResults["lists-pre"])) {
+            runExportLists()
+          } else {
+            Timber.w("Skipping custom-list export because the Lists bridge pre-pass failed.")
+          }
+          if (BridgePrepassPolicy.canRunLegacyExport(bridgeEnabled, bridgeResults["ratings-pre"])) {
+            runExportRatings()
+          } else {
+            Timber.w("Skipping ratings export because the Ratings bridge pre-pass failed.")
+          }
         }
         if (isImport || isExport) {
           bridgeResults["history"] = runFloppyBridgeHistorySync()
