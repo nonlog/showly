@@ -46,8 +46,9 @@ class ShowDetailsWatchedSeasonCase @Inject constructor(
         return Result.SUCCESS
       }
       else -> {
-        episodesManager.setSeasonUnwatched(bundle)
+        // Queue removals first so unfollowed episodes retain durable provider identity.
         quickSyncManager.clearEpisodes(season.episodes.map { it.ids.trakt.id })
+        episodesManager.setSeasonUnwatched(bundle)
 
         val traktQuickRemoveEnabled = settingsRepository.load().traktQuickRemoveEnabled
         val showRemoveTrakt = userManager.isAuthorized() && traktQuickRemoveEnabled && !isLocal && isCollection

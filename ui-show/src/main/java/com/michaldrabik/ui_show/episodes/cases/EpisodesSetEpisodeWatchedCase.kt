@@ -45,8 +45,10 @@ class EpisodesSetEpisodeWatchedCase @Inject constructor(
         return Result.SUCCESS
       }
       else -> {
-        episodesManager.setEpisodeUnwatched(episodeBundle)
+        // Capture the episode/show identity in the durable REMOVE mutation before
+        // EpisodesManager may delete an unfollowed episode row from local storage.
         quickSyncManager.clearEpisodes(listOf(episode.ids.trakt.id))
+        episodesManager.setEpisodeUnwatched(episodeBundle)
 
         val traktQuickRemoveEnabled = settingsRepository.load().traktQuickRemoveEnabled
         val isSeasonLocal = seasonsCache.areSeasonsLocal(show.ids.trakt)

@@ -15,6 +15,9 @@ data class TraktSyncQueue(
   @ColumnInfo(name = "updated_at") val updatedAt: Long,
   @ColumnInfo(name = "trakt_done", defaultValue = "0") val traktDone: Boolean = false,
   @ColumnInfo(name = "floppy_done", defaultValue = "0") val floppyDone: Boolean = false,
+  @ColumnInfo(name = "media_tmdb_id", defaultValue = "NULL") val mediaTmdbId: Long? = null,
+  @ColumnInfo(name = "season_number", defaultValue = "NULL") val seasonNumber: Int? = null,
+  @ColumnInfo(name = "episode_number", defaultValue = "NULL") val episodeNumber: Int? = null,
 ) {
 
   companion object {

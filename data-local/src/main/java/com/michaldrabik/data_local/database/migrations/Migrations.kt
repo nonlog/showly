@@ -821,6 +821,9 @@ class Migrations(
     override fun migrate(database: SupportSQLiteDatabase) {
       database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN trakt_done INTEGER NOT NULL DEFAULT 0")
       database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN floppy_done INTEGER NOT NULL DEFAULT 0")
+      database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN media_tmdb_id INTEGER DEFAULT NULL")
+      database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN season_number INTEGER DEFAULT NULL")
+      database.execSQL("ALTER TABLE trakt_sync_queue ADD COLUMN episode_number INTEGER DEFAULT NULL")
 
       // Imported Trakt history always carries last_exported_at. A watched episode with
       // last_exported_at = NULL is therefore a durable signal for local-only history
@@ -836,7 +839,10 @@ class Migrations(
           created_at,
           updated_at,
           trakt_done,
-          floppy_done
+          floppy_done,
+          media_tmdb_id,
+          season_number,
+          episode_number
         )
         SELECT
           e.id_trakt,
@@ -846,8 +852,12 @@ class Migrations(
           COALESCE(e.last_watched_at, CAST(strftime('%s','now') AS INTEGER) * 1000),
           COALESCE(e.last_watched_at, CAST(strftime('%s','now') AS INTEGER) * 1000),
           0,
-          0
+          0,
+          s.id_tmdb,
+          e.season_number,
+          e.episode_number
         FROM episodes e
+        LEFT JOIN shows s ON s.id_trakt = e.id_show_trakt
         WHERE e.is_watched = 1
           AND e.last_exported_at IS NULL
           AND NOT EXISTS (

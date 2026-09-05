@@ -39,7 +39,21 @@ class QuickSyncManager @Inject constructor(
     }
 
     val timestamp = customDate?.toUtcZone()?.toMillis() ?: nowUtcMillis()
-    val items = episodesIds.map { TraktSyncQueue.createEpisode(it, showId, timestamp, timestamp, clearProgress) }
+    val showTmdbId = localSource.shows
+      .getById(showId)
+      ?.idTmdb
+      ?.takeIf { it > 0 }
+    val episodesById = localSource.episodes.getAll(episodesIds).associateBy { it.idTrakt }
+    val items = episodesIds.map { episodeId ->
+      val episode = episodesById[episodeId]
+      TraktSyncQueue
+        .createEpisode(episodeId, showId, timestamp, timestamp, clearProgress)
+        .copy(
+          mediaTmdbId = showTmdbId,
+          seasonNumber = episode?.seasonNumber,
+          episodeNumber = episode?.episodeNumber,
+        )
+    }
     localSource.traktSyncQueue.insert(items)
     Timber.d("Episodes added into sync queue. Count: ${items.size}")
 
@@ -175,10 +189,26 @@ class QuickSyncManager @Inject constructor(
     }
 
     val time = nowUtcMillis()
+    val episodesById = localSource.episodes.getAll(episodesIds).associateBy { it.idTrakt }
+    val showTmdbByTrakt = episodesById.values
+      .map { it.idShowTrakt }
+      .distinct()
+      .associateWith { showTraktId ->
+        localSource.shows
+          .getById(showTraktId)
+          ?.idTmdb
+          ?.takeIf { it > 0 }
+      }
     val removals = episodesIds.map { id ->
+      val episode = episodesById[id]
       TraktSyncQueue
-        .createEpisode(id, null, time, time, clearProgress = false)
-        .copy(operation = Operation.REMOVE.slug)
+        .createEpisode(id, episode?.idShowTrakt, time, time, clearProgress = false)
+        .copy(
+          operation = Operation.REMOVE.slug,
+          mediaTmdbId = episode?.idShowTrakt?.let(showTmdbByTrakt::get),
+          seasonNumber = episode?.seasonNumber,
+          episodeNumber = episode?.episodeNumber,
+        )
     }
     transactions.withTransaction {
       localSource.traktSyncQueue.deleteAll(episodesIds, Type.EPISODE.slug)

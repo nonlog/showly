@@ -87,22 +87,26 @@ class FloppyQuickSyncRunner @Inject constructor(
 
   private suspend fun syncEpisodeHistory(item: TraktSyncQueue): Int {
     val episode = localSource.episodes.getAll(listOf(item.idTrakt)).firstOrNull()
-      ?: missingIdentity(item)
-    // Episode.idShowTmdb is a historical misnomer in Showly and contains the
-    // episode's own TMDB id. Floppy episode routes require the parent TV TMDB id.
-    val showTmdbId = localSource.shows
-      .getById(episode.idShowTrakt)
-      ?.idTmdb
+    // Persisted coordinates are authoritative for REMOVE because an unfollowed
+    // episode is deleted from Showly immediately when the user marks it unwatched.
+    // Fall back to the local row for pre-schema-44/add paths.
+    val showTmdbId = item.mediaTmdbId
       ?.takeIf { it > 0 }
+      ?: episode
+        ?.let { localSource.shows.getById(it.idShowTrakt) }
+        ?.idTmdb
+        ?.takeIf { it > 0 }
       ?: missingIdentity(item)
+    val seasonNumber = item.seasonNumber ?: episode?.seasonNumber ?: missingIdentity(item)
+    val episodeNumber = item.episodeNumber ?: episode?.episodeNumber ?: missingIdentity(item)
 
     return when (item.operation) {
       Operation.REMOVE.slug -> {
         val identity = FloppyBridgeHistoryIdentity(
           kind = FloppyBridgeHistoryKind.EPISODE,
           tmdbId = showTmdbId,
-          season = episode.seasonNumber,
-          episode = episode.episodeNumber,
+          season = seasonNumber,
+          episode = episodeNumber,
         )
         floppyBridgeSource.fetchHistoryEvents(identity).sumOf { event ->
           if (floppyBridgeSource.removeHistoryEvent(event)) 1 else 0
@@ -111,8 +115,8 @@ class FloppyQuickSyncRunner @Inject constructor(
       else -> if (
         floppySource.ensureEpisodeHistory(
           showTmdbId = showTmdbId,
-          season = episode.seasonNumber,
-          episode = episode.episodeNumber,
+          season = seasonNumber,
+          episode = episodeNumber,
           watchedAt = dateIsoStringFromMillis(item.updatedAt),
         )
       ) {
