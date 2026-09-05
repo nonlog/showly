@@ -69,7 +69,11 @@ class TraktExportWatchedRunner @Inject constructor(
 
     val localMyShows = localSource.myShows.getAll()
     var localEpisodes = emptyList<Episode>()
-    val localEpisodesNotExported = batchEpisodes(localMyShows.map { it.idTrakt })
+    // A watched episode is user history even when its parent show is not followed.
+    // The previous exporter scoped this query to My Shows and silently skipped local
+    // history created from search/details for an unfollowed show.
+    val localEpisodesNotExported = localSource.episodes
+      .getAllWatched()
       .filter { it.lastExportedAt == null }
 
     if (localEpisodesNotExported.isNotEmpty()) {
@@ -245,19 +249,6 @@ class TraktExportWatchedRunner @Inject constructor(
     if (!floppyRemoteDataSource.getConfig().enabled) return false
     val state = bridgeStateRepository.get(BridgeHistoryKey.DOMAIN, entityKey)
     return BridgeTombstoneExportPolicy.shouldSuppress(state, localChangedAt)
-  }
-
-  private suspend fun batchEpisodes(
-    showsIds: List<Long>,
-    allEpisodes: MutableList<Episode> = mutableListOf(),
-  ): List<Episode> {
-    val batch = showsIds.take(250)
-    if (batch.isEmpty()) return allEpisodes
-
-    val episodes = localSource.episodes.getAllWatchedForShows(batch)
-    allEpisodes.addAll(episodes)
-
-    return batchEpisodes(showsIds.filter { it !in batch }, allEpisodes)
   }
 
   private suspend fun batchMovies(

@@ -88,7 +88,13 @@ class FloppyQuickSyncRunner @Inject constructor(
   private suspend fun syncEpisodeHistory(item: TraktSyncQueue): Int {
     val episode = localSource.episodes.getAll(listOf(item.idTrakt)).firstOrNull()
       ?: missingIdentity(item)
-    val showTmdbId = episode.idShowTmdb.takeIf { it > 0 } ?: missingIdentity(item)
+    // Episode.idShowTmdb is a historical misnomer in Showly and contains the
+    // episode's own TMDB id. Floppy episode routes require the parent TV TMDB id.
+    val showTmdbId = localSource.shows
+      .getById(episode.idShowTrakt)
+      ?.idTmdb
+      ?.takeIf { it > 0 }
+      ?: missingIdentity(item)
 
     return when (item.operation) {
       Operation.REMOVE.slug -> {

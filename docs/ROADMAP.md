@@ -76,8 +76,8 @@
 - [x] Add an explicit manual `Trakt ↔ Floppy` sync action and persist last-attempt/last-success/change-count/failed-domain status for the settings UI.
 - [x] Visually validate the redesigned credentials UI on-device (confirmed by user on 2026-09-05).
 - [x] Serialize manual/periodic full bridge runs and reset visible bridge status when the Floppy remote identity changes (verified in Fork CI #40).
-- [ ] Promote Showly local History/Watchlist mutations to first-class three-way mutations instead of relying on Trakt as an intermediate. Schema-44 durable per-provider ACKs and the direct Showly -> Floppy fast path are implemented locally and await Fork CI/device validation.
-- [ ] Reduce full-sync latency. The duplicate History/Watchlist post-pass and Floppy History N+1 detail scan are removed locally; measure on-device after CI and then optimize Ratings/Custom Lists if needed.
+- [ ] Promote Showly local History/Watchlist mutations to first-class three-way mutations instead of relying on Trakt as an intermediate. Schema-44 durable per-provider ACKs, direct Showly -> Floppy fast path, shared execution gate, and pre-snapshot outbox drain are verified through Fork CI #50; parent-show TMDB and unfollowed-episode export fixes await the next CI/device test.
+- [ ] Reduce full-sync latency. The duplicate History/Watchlist post-pass and Floppy History N+1 detail scan are verified through Fork CI #50; measure on-device against the prior ~65.3 s run and then optimize Ratings/Custom Lists only if needed.
 - [ ] Add per-domain pending/conflict detail beyond the current last-run summary. Pending-domain visibility is complete; item-level conflict detail remains deferred until live validation.
 - [ ] Perform on-device conflict tests in both directions, including delete-vs-edit, rewatch, rating removal, and remote identity changes. Custom Lists and Watchlist are complete in controlled live tests; the Watchlist Trakt-deletion regression is fixed and verified on-device with CI #44. Ratings/History stale-export hardening awaits Fork CI/live validation.
 
