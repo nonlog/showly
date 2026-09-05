@@ -7,7 +7,7 @@ Last updated: 2026-09-05
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `7adf0f17aedd8bb684decab2bb7ccbb0f8a16979` (`fix: gate legacy exports on bridge prepass`).
+- Latest fully verified code head: `a578bae44c6c8ef30c48dbefb1466115b2e8bcf5` (`fix: create ratings for metadata-only media`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -41,6 +41,7 @@ Last updated: 2026-09-05
 - Run #44 (`33938982250`) on `f39a391` completed successfully: ktlint, selected unit tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-f39a391b4aa86c10f76317116063848c3bc37449` is 15,567,234 bytes with SHA-256 `114c8e69cdb55fe6c3b97ae825a6c1c4e33b09a5dd5a4c1f458e650c05b94556`; extracted APK is 17,368,691 bytes with SHA-256 `af09d4777dccc89ea72799c863ee208faa41e80d73090008d35fbe6ac1e991e5`. It was installed on CPH2573 after ADB recovered, and the exact previously failing Trakt-side Watchlist deletion case passed live: Trakt remained absent and the Floppy Planning row was removed with zero bridge failures.
 - Run #45 (`33939410106`) on `bdcd11c` completed successfully: ktlint, selected unit tests including the focused bridge tombstone export policy tests, Debug APK build, and artifact upload all passed. Artifact `showly-debug-bdcd11c1cb825bd98ee95822d27a1f375e1453b8` is 15,568,551 bytes with SHA-256 `88bfc106dd6f3412969fd93787dbeee2af67a7a868bac3647877c614a6faae99`; extracted APK is 17,370,859 bytes with SHA-256 `9a3bf44b5b9bb31143bad4623d890c78b400be0b1c64f528a69b3873628e2f92`. It is installed on CPH2573; production Showly remains unchanged.
 - Run #46 (`33939987820`) on `7adf0f1` completed successfully: ktlint, focused `BridgePrepassPolicyTest`, selected unit tests, Debug APK build, and artifact upload all passed. This is the verified failure-safety baseline where a failed bridge pre-pass blocks only the matching legacy Trakt export while other domains continue.
+- Run #47 (`33940334616`) on `a578bae` completed successfully: ktlint, selected unit tests including the focused Floppy rating write-action coverage, Debug APK build, and artifact upload all passed. Artifact `showly-debug-a578bae44c6c8ef30c48dbefb1466115b2e8bcf5` is 15,572,268 bytes with GitHub artifact digest `sha256:b9d1f16941d5267cad10fd990b2a57b1d2957b393300b853840c0c1098bcca6d`; extracted APK is 17,374,165 bytes with SHA-256 `cdfaed6573ce74aedf08157445ff71a41f5194a8c8c8ffc3929bc3e67cbb3191`. It was installed successfully on CPH2573 as `com.michaldrabik.showly2.debugoss` (`versionCode=923`, `versionName=3.58.1-debug`); production `com.michaldrabik.showly2` remains `3.70.0` (`versionCode=840`). Temporary device transfer files were removed.
 
 ## Completed fork work
 
@@ -103,7 +104,7 @@ Fork CI #42 verifies the durable retry layer:
 - S0.75: end-to-end Trakt login using a GitHub-built APK.
 - S1: Floppy settings screen against a real user API token.
 - S2: on-device bootstrap test against the configured Floppy account. GitHub CI verification for the current integrated branch is tracked above.
-- Device install baseline: CI #45 debug APK is installed. CI #44 already passed the controlled Watchlist regression re-test; production Showly remains untouched.
+- Device install baseline: CI #47 debug APK is installed. CI #44 already passed the controlled Watchlist regression re-test; production Showly remains untouched.
 
 ## S3 active design: watchlist mirroring
 
