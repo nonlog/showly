@@ -225,6 +225,8 @@ A release-like QA path and fork-owned Baseline Profile generation path are now b
 - `qa` inherits the release build type, keeps R8/minification enabled, runs with `BuildConfig.DEBUG=false`, and uses the existing `.debugoss` application id plus debug signing so it can replace the current fork debug install without touching production Showly or losing the fork's local data.
 - A `:baselineprofile` `com.android.test` producer targets `:app` and records the startup critical path with `BaselineProfileRule`.
 - Generated profile rules are configured to merge into `src/main`, so both release and release-like QA builds can consume the fork-specific profile after it is generated and committed.
-- Fork CI now builds both debug and QA artifacts. A separate manually-triggered workflow generates the profile on an AOSP Gradle Managed Device and uploads the generated rules for review/commit.
+- Fork CI now builds both debug and QA artifacts. A manual `Fork CI` input (`generate_baseline_profile=true`) generates the profile on an AOSP Gradle Managed Device and uploads the generated rules for review/commit; normal push CI skips this expensive job.
 
 Do not copy the official 3.70.0 `baseline.prof`: generate and commit the fork-specific rules, then compare cold startup on the same device/data using the QA build.
+
+Fork CI #55 on `5e6fbaf` verified the first startup-performance layer: lint, unit tests, normal Debug APK, and the new R8 `qa` APK all passed. The QA artifact is 6,333,214 bytes with SHA-256 `b9d1088a9acdf56cf4b536c6721f63ba1500c1a97b31a26a14faff4426bfd497`, versus ~17 MB for the unminified Debug APK. It already packages dependency/merged `assets/dexopt/baseline.prof` and `baseline.profm`; these are not yet the generated Showly startup rules. The next step is generating the fork-specific app profile and rebuilding QA with it.

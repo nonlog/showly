@@ -86,6 +86,7 @@ android {
     mergeIntoMain = true
     saveInSrc = true
     automaticGenerationDuringBuild = false
+    dexLayoutOptimization = true
   }
 
   lint {
