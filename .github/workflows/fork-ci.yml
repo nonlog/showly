@@ -71,6 +71,10 @@ jobs:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
           TMDB_READ_ACCESS_TOKEN: ${{ secrets.TMDB_READ_ACCESS_TOKEN }}
+          SHOWLY_FORK_RELEASE_KEYSTORE_B64: ${{ secrets.SHOWLY_FORK_RELEASE_KEYSTORE_B64 }}
+          SHOWLY_FORK_RELEASE_STORE_PASSWORD: ${{ secrets.SHOWLY_FORK_RELEASE_STORE_PASSWORD }}
+          SHOWLY_FORK_RELEASE_KEY_ALIAS: ${{ secrets.SHOWLY_FORK_RELEASE_KEY_ALIAS }}
+          SHOWLY_FORK_RELEASE_KEY_PASSWORD: ${{ secrets.SHOWLY_FORK_RELEASE_KEY_PASSWORD }}
         run: |
           umask 077
           trakt_client_id="${TRAKT_CLIENT_ID:-ci-placeholder}"
@@ -92,12 +96,23 @@ jobs:
           tmdbApiKey="${tmdb_read_access_token}"
           omdbApiKey="ci-placeholder"
           EOF
-          cat > app/keystore.properties <<'EOF'
+          if [[ -n "${SHOWLY_FORK_RELEASE_KEYSTORE_B64:-}" && -n "${SHOWLY_FORK_RELEASE_STORE_PASSWORD:-}" && -n "${SHOWLY_FORK_RELEASE_KEY_ALIAS:-}" && -n "${SHOWLY_FORK_RELEASE_KEY_PASSWORD:-}" ]]; then
+            printf '%s' "$SHOWLY_FORK_RELEASE_KEYSTORE_B64" | base64 --decode > app/keystore
+            cat > app/keystore.properties <<EOF
+          storePassword=$SHOWLY_FORK_RELEASE_STORE_PASSWORD
+          keyPassword=$SHOWLY_FORK_RELEASE_KEY_PASSWORD
+          keyAlias=$SHOWLY_FORK_RELEASE_KEY_ALIAS
+          EOF
+            echo "Persistent fork Release signing enabled."
+          else
+            cat > app/keystore.properties <<'EOF'
           storePassword=ci-placeholder
           keyPassword=ci-placeholder
           keyAlias=ci-placeholder
           EOF
-          : > app/keystore
+            : > app/keystore
+            echo "Persistent fork Release signing unavailable in this CI context."
+          fi
 
       - name: Run unit tests
         shell: bash
@@ -136,14 +151,16 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Build release-like QA APK
-        run: ./gradlew --no-daemon --stacktrace :app:assembleQa
+      - name: Build fork Release APK
+        if: github.event_name != 'pull_request'
+        run: ./gradlew --no-daemon --stacktrace :app:assembleForkRelease
 
-      - name: Upload release-like QA APK
+      - name: Upload fork Release APK
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: showly-performance-qa-${{ github.sha }}
-          path: app/build/outputs/apk/qa/*.apk
+          name: showly-release-${{ github.sha }}
+          path: app/build/outputs/apk/forkRelease/*.apk
           if-no-files-found: error
           retention-days: 14
 

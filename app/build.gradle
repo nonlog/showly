@@ -73,11 +73,11 @@ android {
           appIconRound: "@mipmap/ic_launcher_round"
       ]
     }
-    qa {
+    forkRelease {
       initWith release
       applicationIdSuffix '.debugoss'
-      versionNameSuffix '-qa'
-      signingConfig signingConfigs.debug
+      versionNameSuffix '-release'
+      signingConfig signingConfigs.release
       matchingFallbacks = ['release']
     }
   }
