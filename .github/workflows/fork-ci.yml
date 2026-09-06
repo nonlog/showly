@@ -142,7 +142,7 @@ jobs:
       - name: Upload release-like QA APK
         uses: actions/upload-artifact@v7
         with:
-          name: showly-qa-${{ github.sha }}
+          name: showly-performance-qa-${{ github.sha }}
           path: app/build/outputs/apk/qa/*.apk
           if-no-files-found: error
           retention-days: 14

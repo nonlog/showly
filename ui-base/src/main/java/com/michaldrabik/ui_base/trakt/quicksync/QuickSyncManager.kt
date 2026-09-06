@@ -10,7 +10,7 @@ import com.michaldrabik.data_local.database.model.TraktSyncQueue
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Operation
 import com.michaldrabik.data_local.database.model.TraktSyncQueue.Type
 import com.michaldrabik.data_local.utilities.TransactionsProvider
-import com.michaldrabik.data_remote.floppy.FloppyRemoteDataSource
+import com.michaldrabik.data_remote.floppy.FloppyConfigStore
 import com.michaldrabik.repository.UserTraktManager
 import com.michaldrabik.repository.settings.SettingsRepository
 import timber.log.Timber
@@ -25,7 +25,7 @@ class QuickSyncManager @Inject constructor(
   private val localSource: LocalDataSource,
   private val transactions: TransactionsProvider,
   private val workManager: WorkManager,
-  private val floppyRemoteDataSource: FloppyRemoteDataSource,
+  private val floppyConfigStore: FloppyConfigStore,
 ) {
 
   suspend fun scheduleEpisodes(
@@ -182,7 +182,7 @@ class QuickSyncManager @Inject constructor(
   suspend fun clearEpisodes(episodesIds: List<Long>) {
     if (!ensureBridgeMutationRemove()) return
 
-    if (!floppyRemoteDataSource.getConfig().enabled) {
+    if (!floppyConfigStore.isEnabled()) {
       val count = localSource.traktSyncQueue.deleteAll(episodesIds, Type.EPISODE.slug)
       Timber.d("Episodes removed from sync queue. Count: $count")
       return
@@ -227,7 +227,7 @@ class QuickSyncManager @Inject constructor(
   suspend fun clearMovies(moviesIds: List<Long>) {
     if (!ensureBridgeMutationRemove()) return
 
-    if (!floppyRemoteDataSource.getConfig().enabled) {
+    if (!floppyConfigStore.isEnabled()) {
       localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE.slug)
       Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
       return
@@ -247,7 +247,7 @@ class QuickSyncManager @Inject constructor(
   suspend fun clearWatchlistShows(showsIds: List<Long>) {
     if (!ensureBridgeMutationRemove()) return
 
-    if (!floppyRemoteDataSource.getConfig().enabled) {
+    if (!floppyConfigStore.isEnabled()) {
       localSource.traktSyncQueue.deleteAll(showsIds, Type.SHOW_WATCHLIST.slug)
       Timber.d("Shows removed from sync queue. Count: ${showsIds.size}")
       return
@@ -267,7 +267,7 @@ class QuickSyncManager @Inject constructor(
   suspend fun clearWatchlistMovies(moviesIds: List<Long>) {
     if (!ensureBridgeMutationRemove()) return
 
-    if (!floppyRemoteDataSource.getConfig().enabled) {
+    if (!floppyConfigStore.isEnabled()) {
       localSource.traktSyncQueue.deleteAll(moviesIds, Type.MOVIE_WATCHLIST.slug)
       Timber.d("Movies removed from sync queue. Count: ${moviesIds.size}")
       return
@@ -299,7 +299,7 @@ class QuickSyncManager @Inject constructor(
   }
 
   suspend fun isAnyScheduled(): Boolean {
-    val hasTarget = userTraktManager.isAuthorized() || floppyRemoteDataSource.getConfig().enabled
+    val hasTarget = userTraktManager.isAuthorized() || floppyConfigStore.isEnabled()
     return hasTarget && localSource.traktSyncQueue.getAll().isNotEmpty()
   }
 
@@ -326,12 +326,12 @@ class QuickSyncManager @Inject constructor(
   }
 
   private suspend fun ensureBridgeMutationSync(): Boolean {
-    if (floppyRemoteDataSource.getConfig().enabled) return true
+    if (floppyConfigStore.isEnabled()) return true
     return ensureQuickSync()
   }
 
   private suspend fun ensureBridgeMutationRemove(): Boolean {
-    if (floppyRemoteDataSource.getConfig().enabled) return true
+    if (floppyConfigStore.isEnabled()) return true
     return ensureQuickRemove()
   }
 

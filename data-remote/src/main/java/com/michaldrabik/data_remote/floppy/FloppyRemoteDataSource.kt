@@ -134,12 +134,10 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
   @Named("networkPreferences") private val preferences: SharedPreferences,
   @Named("okHttpBase") private val okHttpClient: OkHttpClient,
   private val moshi: Moshi,
+  private val configStore: FloppyConfigStore,
 ) : FloppyRemoteDataSource {
 
   companion object {
-    private const val KEY_ENABLED = "FLOPPY_ENABLED"
-    private const val KEY_BASE_URL = "FLOPPY_BASE_URL"
-    private const val KEY_API_KEY = "FLOPPY_API_KEY"
     private const val KEY_HISTORY_MOVIES = "FLOPPY_HISTORY_MOVIES_CHECKPOINT"
     private const val KEY_HISTORY_EPISODES = "FLOPPY_HISTORY_EPISODES_CHECKPOINT"
     private const val KEY_WATCHLIST_MOVIES = "FLOPPY_WATCHLIST_MOVIES_OWNERSHIP"
@@ -151,18 +149,13 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
 
   @Volatile private var connectionValidationCache: FloppyConnectionValidationCache? = null
 
-  private val mediaDetailAdapter = moshi.adapter(FloppyMediaDetail::class.java)
-  private val movieHistoryAdapter = moshi.adapter(FloppyMovieHistoryRequest::class.java)
-  private val episodeHistoryAdapter = moshi.adapter(FloppyEpisodeHistoryRequest::class.java)
-  private val watchlistAdapter = moshi.adapter(FloppyWatchlistRequest::class.java)
-  private val trackedMediaAdapter = moshi.adapter(FloppyTrackedMediaResponse::class.java)
+  private val mediaDetailAdapter by lazy { moshi.adapter(FloppyMediaDetail::class.java) }
+  private val movieHistoryAdapter by lazy { moshi.adapter(FloppyMovieHistoryRequest::class.java) }
+  private val episodeHistoryAdapter by lazy { moshi.adapter(FloppyEpisodeHistoryRequest::class.java) }
+  private val watchlistAdapter by lazy { moshi.adapter(FloppyWatchlistRequest::class.java) }
+  private val trackedMediaAdapter by lazy { moshi.adapter(FloppyTrackedMediaResponse::class.java) }
 
-  override fun getConfig() =
-    FloppyConfig(
-      enabled = preferences.getBoolean(KEY_ENABLED, false),
-      baseUrl = preferences.getString(KEY_BASE_URL, "").orEmpty(),
-      apiKey = preferences.getString(KEY_API_KEY, "").orEmpty(),
-    )
+  override fun getConfig() = configStore.getConfig()
 
   override fun saveConfig(config: FloppyConfig) {
     connectionValidationCache = null
@@ -170,9 +163,9 @@ internal class DefaultFloppyRemoteDataSource @Inject constructor(
     val identityChanged = isFloppyIdentityChanged(previous, config)
     preferences
       .edit()
-      .putBoolean(KEY_ENABLED, config.enabled)
-      .putString(KEY_BASE_URL, config.baseUrl)
-      .putString(KEY_API_KEY, config.apiKey)
+      .putBoolean(FLOPPY_KEY_ENABLED, config.enabled)
+      .putString(FLOPPY_KEY_BASE_URL, config.baseUrl)
+      .putString(FLOPPY_KEY_API_KEY, config.apiKey)
       .apply {
         if (identityChanged) {
           remove(KEY_HISTORY_MOVIES)
