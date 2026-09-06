@@ -88,4 +88,4 @@ Evaluate hidden/dropped state, notes/comments, playback progress, and other capa
 ## S6 - Deeper decoupling (optional)
 
 Only after dual-backend tracking is stable, evaluate catalog decoupling and a provider-neutral local media key as separate migration projects.
-- [ ] Close the startup-speed gap to official 3.70.0: `6a19307` and `f215b35` remove both eager Floppy-network startup dependencies; CI #60 is green. Baseline Profile workflow #61 regenerated the startup profile from 24,013 to 23,801 rules with zero `FloppyRemoteDataSource` startup entries. Build the refreshed profile into the clearly named `showly-performance-qa-*` artifact and perform same-device A/B against official 3.70.0.
+- [ ] Close the startup-speed gap to official 3.70.0: `6a19307` and `f215b35` remove both eager Floppy-network startup dependencies; profile workflow #61 regenerated 23,801 rules with zero `FloppyRemoteDataSource` startup entries; final CI #62 is green and produced `showly-performance-qa-50d33e7...` with the corrected profile. Remaining step: same-device A/B against official 3.70.0 once ADB is online.
