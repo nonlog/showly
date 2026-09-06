@@ -88,4 +88,4 @@ Evaluate hidden/dropped state, notes/comments, playback progress, and other capa
 ## S6 - Deeper decoupling (optional)
 
 Only after dual-backend tracking is stable, evaluate catalog decoupling and a provider-neutral local media key as separate migration projects.
-- [ ] Close the startup-speed gap to official 3.70.0: release-like QA is verified in CI #58 with the committed 24,013-rule fork Baseline Profile compiled into the APK (`baseline.prof` 15,044 bytes). Perform same-device cold-start A/B against the current fork Debug and official 3.70.0; device validation is blocked only by the temporarily unavailable Windows/ADB connector.
+- [ ] Close the startup-speed gap to official 3.70.0: `6a19307` and `f215b35` remove both eager Floppy-network startup dependencies; CI #60 is green. Baseline Profile workflow #61 regenerated the startup profile from 24,013 to 23,801 rules with zero `FloppyRemoteDataSource` startup entries. Build the refreshed profile into the clearly named `showly-performance-qa-*` artifact and perform same-device A/B against official 3.70.0.
