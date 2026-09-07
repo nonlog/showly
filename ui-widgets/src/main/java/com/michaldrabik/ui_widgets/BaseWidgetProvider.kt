@@ -3,6 +3,9 @@ package com.michaldrabik.ui_widgets
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.res.Configuration
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
 import com.michaldrabik.repository.settings.SettingsRepository
 import com.michaldrabik.ui_model.Settings
 import kotlinx.coroutines.runBlocking
@@ -20,7 +23,15 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
   @Inject lateinit var settingsRepository: SettingsRepository
   protected lateinit var settings: Settings
 
-  abstract fun getLayoutResId(): Int
+  abstract fun getLayoutResId(context: Context): Int
+
+  protected fun isLightWidgetTheme(context: Context): Boolean =
+    when (settingsRepository.widgets.widgetsTheme) {
+      MODE_NIGHT_NO -> true
+      MODE_NIGHT_FOLLOW_SYSTEM ->
+        context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK != Configuration.UI_MODE_NIGHT_YES
+      else -> false
+    }
 
   protected fun getBackgroundResId() =
     when (settingsRepository.widgets.widgetsTransparency) {

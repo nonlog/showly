@@ -52,7 +52,7 @@ class SettingsWidgetsFragment : BaseFragment<SettingsWidgetsViewModel>(R.layout.
   }
 
   private fun showThemeDialog(current: AppTheme) {
-    val options = listOf(AppTheme.DARK, AppTheme.LIGHT)
+    val options = AppTheme.entries
     val selected = options.indexOf(current)
     MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialog)
       .setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.bg_dialog))
