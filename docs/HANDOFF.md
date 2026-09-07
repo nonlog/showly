@@ -1,16 +1,24 @@
 # Development Handoff
 
-Last updated: 2026-09-05
+Last updated: 2026-09-08
 
 ## Active line
 
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `00462bc401fc551dae669a200224a455851f798a` (`fix: persist episode bridge identity`).
+- Latest fully verified code head: `c34768b73eed4127b1301995e8491bfb89687cb4` (`Fix Floppy serialization in release builds`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
+
+
+## 2026-09-08 release compatibility hardening
+
+- Root cause for the observed Debug-vs-Release Floppy sync difference was isolated to the fork's reflection-only Moshi wire models crossing the R8/minification boundary. Debug does not shrink these models; forkRelease does.
+- Commit `c34768b` converts every Floppy request/response wire DTO to generated Moshi adapters and adds the Moshi KSP code generator. R8 remains enabled; no release optimization or startup graph change was weakened.
+- Fork CI run `34142281655` is green for ktlint, selected unit tests, Debug APK, and true R8 `forkRelease` APK. Artifacts are `showly-debug-c34768b...` and `showly-release-c34768b...`.
+- The earlier startup fixes remain intact: startup-sensitive QuickSync only reads `FloppyConfigStore`, and the aggregate startup remote source still has no Floppy network dependency.
 
 ## Current CI state
 
