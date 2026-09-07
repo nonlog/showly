@@ -2,6 +2,7 @@ package com.michaldrabik.data_remote.floppy
 
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -21,12 +22,14 @@ import kotlin.coroutines.resumeWithException
 
 internal const val KEY_FLOPPY_LISTS_OWNERSHIP = "FLOPPY_LISTS_OWNERSHIP"
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyListRequest(
   val name: String,
   val description: String,
   @Json(name = "is_public") val isPublic: Boolean,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyListResponse(
   val id: Long,
 )
@@ -39,6 +42,7 @@ data class FloppyBridgeList(
   val latestUpdate: Long,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyListWire(
   val id: Long,
   val name: String,
@@ -47,6 +51,7 @@ internal data class FloppyListWire(
   @Json(name = "latest_update") val latestUpdate: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyListEnvelope(
   val pagination: FloppyBridgePagination = FloppyBridgePagination(),
   val results: List<FloppyListWire> = emptyList(),

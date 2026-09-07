@@ -1,6 +1,7 @@
 package com.michaldrabik.data_remote.floppy
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -36,6 +37,7 @@ data class FloppyBridgeHistoryEvent(
   val watchedAt: Long,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeHistoryItemWire(
   @Json(name = "media_id") val mediaId: String? = null,
   val source: String? = null,
@@ -44,6 +46,7 @@ internal data class FloppyBridgeHistoryItemWire(
   @Json(name = "episode_number") val episodeNumber: Int? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeFlatHistoryWire(
   @Json(name = "media_type") val mediaType: String? = null,
   val item: FloppyBridgeHistoryItemWire? = null,
@@ -53,11 +56,13 @@ internal data class FloppyBridgeFlatHistoryWire(
   @Json(name = "episode_number") val episodeNumber: Int? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeFlatHistoryEnvelope(
   val pagination: FloppyBridgePagination = FloppyBridgePagination(),
   val results: List<FloppyBridgeFlatHistoryWire> = emptyList(),
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeConsumptionEnvelope(
   val pagination: FloppyBridgePagination = FloppyBridgePagination(),
   val results: List<FloppyConsumption> = emptyList(),
@@ -78,6 +83,7 @@ data class FloppyBridgeRating(
   val changedAt: Long,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeRatingCreateRequest(
   val source: String = "tmdb",
   @Json(name = "media_id") val mediaId: Long,
@@ -85,16 +91,19 @@ internal data class FloppyBridgeRatingCreateRequest(
   val score: Double?,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeRatingUpdateRequest(
   val score: Double?,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeItem(
   @Json(name = "media_id") val mediaId: String? = null,
   val source: String? = null,
   @Json(name = "media_type") val mediaType: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeTrackedMediaWire(
   @Json(name = "consumption_id") val consumptionId: Long? = null,
   val item: FloppyBridgeItem? = null,
@@ -104,27 +113,32 @@ internal data class FloppyBridgeTrackedMediaWire(
   @Json(name = "end_date") val endDate: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgePagination(
   val total: Int = 0,
   val limit: Int = 0,
   val offset: Int = 0,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeTrackedEnvelope(
   val pagination: FloppyBridgePagination = FloppyBridgePagination(),
   val results: List<FloppyBridgeTrackedMediaWire> = emptyList(),
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeChange(
   val field: String,
   @Json(name = "new_value") val newValue: Any? = null,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeChangeEntry(
   val timestamp: String? = null,
   val changes: List<FloppyBridgeChange> = emptyList(),
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyBridgeChangeEnvelope(
   val pagination: FloppyBridgePagination = FloppyBridgePagination(),
   val results: List<FloppyBridgeChangeEntry> = emptyList(),

@@ -2,6 +2,7 @@ package com.michaldrabik.data_remote.floppy
 
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -45,16 +46,19 @@ enum class FloppyWatchlistType {
   SHOWS,
 }
 
+@JsonClass(generateAdapter = true)
 data class FloppyConsumption(
   @Json(name = "consumption_id") val consumptionId: Long? = null,
   val status: Int? = null,
   @Json(name = "end_date") val endDate: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 data class FloppyMediaDetail(
   val consumptions: List<FloppyConsumption> = emptyList(),
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyMovieHistoryRequest(
   val source: String = "tmdb",
   @Json(name = "media_id") val mediaId: Long,
@@ -62,16 +66,19 @@ internal data class FloppyMovieHistoryRequest(
   @Json(name = "end_date") val endDate: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyEpisodeHistoryRequest(
   @Json(name = "end_date") val endDate: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyWatchlistRequest(
   val source: String = "tmdb",
   @Json(name = "media_id") val mediaId: Long,
   val status: Int = 0,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class FloppyTrackedMediaResponse(
   @Json(name = "consumption_id") val consumptionId: Long? = null,
 )

@@ -58,6 +58,7 @@ dependencies {
   api libs.loggingInterceptor
 
   implementation libs.moshi
+  ksp libs.moshi.codegen
   implementation libs.coroutines
   implementation libs.timber
 
