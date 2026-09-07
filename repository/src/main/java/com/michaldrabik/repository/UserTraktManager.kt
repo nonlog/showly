@@ -19,6 +19,7 @@ class UserTraktManager @Inject constructor(
   private val userLocalSource: UserLocalDataSource,
   private val transactions: TransactionsProvider,
   private val tokenProvider: TokenProvider,
+  private val premiumRepository: PremiumRepository,
 ) {
 
   fun isAuthorized() = tokenProvider.getToken() != null
@@ -39,11 +40,13 @@ class UserTraktManager @Inject constructor(
     )
     val user = authorizedRemoteSource.fetchMyProfile()
     saveUser(user)
+    premiumRepository.identify(user.username)
   }
 
   suspend fun revokeToken() {
     val token = tokenProvider.getToken()
     tokenProvider.revokeToken()
+    premiumRepository.logout()
     try {
       if (!token.isNullOrBlank()) {
         remoteSource.revokeAuthTokens(token)

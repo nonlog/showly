@@ -39,6 +39,7 @@ dependencies {
   implementation libs.android.core
   implementation libs.android.appcompat
   implementation libs.timber
+  implementation libs.qonversion
 
   implementation libs.hilt.android
   ksp libs.hilt.compiler

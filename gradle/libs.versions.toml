@@ -30,6 +30,7 @@ mockk = "1.14.9"
 moshi = "1.15.2"
 overscroll-decor = "1.1.1"
 process-phoenix = "3.0.0"
+qonversion = "9.4.1"
 recyclerview = "1.4.0"
 retrofit = "3.0.0"
 swiperefreshlayout = "1.2.0"
@@ -84,6 +85,7 @@ hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.
 
 coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 phoenix = { group = "com.jakewharton", name = "process-phoenix", version.ref = "process-phoenix" }
+qonversion = { group = "io.qonversion.android.sdk", name = "sdk", version.ref = "qonversion" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 circleIndicator = { group = "me.relex", name = "circleindicator", version.ref = "circleindicator" }
 loggingInterceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "logging-interceptor" }

@@ -18,6 +18,10 @@ import com.michaldrabik.ui_widgets.calendar.CalendarWidgetProvider
 import com.michaldrabik.ui_widgets.calendar_movies.CalendarMoviesWidgetProvider
 import com.michaldrabik.ui_widgets.progress.ProgressWidgetProvider
 import com.michaldrabik.ui_widgets.progress_movies.ProgressMoviesWidgetProvider
+import com.qonversion.android.sdk.Qonversion
+import com.qonversion.android.sdk.QonversionConfig
+import com.qonversion.android.sdk.dto.QEnvironment
+import com.qonversion.android.sdk.dto.QLaunchMode
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -32,6 +36,10 @@ class App :
   AppScopeProvider,
   Configuration.Provider,
   WidgetsProvider {
+
+  companion object {
+    private const val QONVERSION_PROJECT_KEY = "UmBNjZH8Qalj0vHlAkl-3R6FDB__HECR"
+  }
 
   override val appScope = MainScope()
 
@@ -74,6 +82,16 @@ class App :
       }
     }
 
+    fun setupPremium() {
+      val config = QonversionConfig
+        .Builder(this, QONVERSION_PROJECT_KEY, QLaunchMode.SubscriptionManagement)
+        .setEnvironment(QEnvironment.Production)
+        .build()
+      Qonversion.initialize(config)
+      @Suppress("DEPRECATION")
+      Qonversion.shared.syncHistoricalData()
+    }
+
     fun setupNotificationChannels() {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
@@ -106,6 +124,7 @@ class App :
     }
 
     setupSettings()
+    setupPremium()
     AppCompatDelegate.setDefaultNightMode(AppTheme.fromName(settingsRepository.appTheme).code)
     setupStrictMode()
     setupNotificationChannels()

@@ -59,6 +59,7 @@ class SettingsFragment :
     launchAndRepeatStarted(
       { viewModel.messageFlow.collect { showSnack(it) } },
       { viewModel.uiState.collect { render(it) } },
+      doAfterLaunch = { viewModel.refreshPremium() },
     )
   }
 
@@ -88,7 +89,8 @@ class SettingsFragment :
 
   private fun render(uiState: SettingsUiState) {
     uiState.run {
-      renderFiltered(uiState.filter)
+      binding.settingsPremium.visibleIf(!isPremium && filter == null)
+      renderFiltered(filter)
     }
   }
 

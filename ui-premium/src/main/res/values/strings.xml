@@ -15,4 +15,10 @@
   <string name="textViewsTitle">Lists view types</string>
   <string name="textViewsDesc">Enable additional collection view types like compact list or grid view.</string>
 
+  <string name="textPremiumActive">Premium is active. Thank you for supporting Showly.</string>
+  <string name="textPremiumForkSupport">Premium support follows the official Showly entitlement. Fork features that were already made free remain available regardless of Premium status.</string>
+  <string name="textPremiumProductsUnavailable">No Google Play Premium products are available for this build.</string>
+  <string name="textPremiumRestore">Restore purchases</string>
+  <string name="textPremiumProductSupport">Support Showly development</string>
+
 </resources>

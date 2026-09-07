@@ -97,23 +97,6 @@
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintTop_toBottomOf="@id/premiumCrown"
       >
-
-      <TextView
-        android:id="@+id/premiumOssText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/spaceNormal"
-        android:layout_marginEnd="@dimen/spaceNormal"
-        android:gravity="center"
-        android:text="Premium features are only available in Google Play Store version of the app."
-        android:textColor="?android:attr/textColorPrimary"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="@id/premiumCrown"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/premiumCrown"
-        app:layout_constraintTop_toTopOf="@id/premiumCrown"
-        />
     </LinearLayout>
 
     <ImageView

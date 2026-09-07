@@ -137,6 +137,7 @@ dependencies {
   implementation libs.hilt.android
   ksp libs.hilt.compiler
   implementation libs.hilt.work
+  implementation libs.qonversion
   ksp libs.hilt.work.compiler
 
   testImplementation libs.bundles.testing
