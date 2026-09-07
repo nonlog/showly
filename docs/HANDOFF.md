@@ -7,7 +7,7 @@ Last updated: 2026-09-08
 - Repository: `nonlog/showly`
 - Active branch: `feat/runtime-credentials-free-features`
 - Upstream baseline: `trakt/showly@ec897b65b1b55c18ce24a755f83f894f422e559a`
-- Latest fully verified code head: `c34768b73eed4127b1301995e8491bfb89687cb4` (`Fix Floppy serialization in release builds`).
+- Latest fully verified code head: `c59d6ad5be683a3163f1ab20ed1151f8fcb9f681` (`Restore follow-system widget themes`).
 - Any later `[skip ci]` handoff-only commit does not change the verified code baseline.
 - Commit identity for agent-created commits: `Codex <codex@openai.com>` for both author and committer.
 - GitHub Actions `Fork CI` is the canonical validation environment.
@@ -19,6 +19,14 @@ Last updated: 2026-09-08
 - Commit `c34768b` converts every Floppy request/response wire DTO to generated Moshi adapters and adds the Moshi KSP code generator. R8 remains enabled; no release optimization or startup graph change was weakened.
 - Fork CI run `34142281655` is green for ktlint, selected unit tests, Debug APK, and true R8 `forkRelease` APK. Artifacts are `showly-debug-c34768b...` and `showly-release-c34768b...`.
 - The earlier startup fixes remain intact: startup-sensitive QuickSync only reads `FloppyConfigStore`, and the aggregate startup remote source still has no Floppy network dependency.
+
+
+## 2026-09-08 follow-system widget theme parity
+
+- Commit `c59d6ad` restores the third System/Follow-system option in Widget settings instead of the fork-only Dark/Light list.
+- Widget providers now resolve `MODE_NIGHT_FOLLOW_SYSTEM` against the current Android night-mode configuration before choosing day/night RemoteViews.
+- The main app already used the official `DARK / LIGHT / SYSTEM(-1)` model and was not rewritten.
+- Fork CI run `34143307878` is green for lint, tests, Debug APK, and R8 forkRelease APK.
 
 ## Current CI state
 

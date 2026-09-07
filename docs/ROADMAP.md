@@ -88,7 +88,7 @@ Evaluate hidden/dropped state, notes/comments, playback progress, and other capa
 ## Fork maintenance - Release parity and settings portability
 
 - [x] Release-like compatibility hardening: keep R8 enabled while making Floppy Moshi wire serialization shrinker-safe; verified by Fork CI on Debug and forkRelease.
-- [ ] Restore System/Follow-system widget theme selection and runtime behavior to official 3.70.0 parity.
+- [x] Restore System/Follow-system widget theme selection and runtime behavior to official 3.70.0 parity.
 - [ ] Rebuild Premium state/UI integration around official 3.70.0 Qonversion structure while keeping fork-free features free.
 - [ ] Extend Backup Import/Export with sensitive fork configuration/runtime credentials and reset identity-bound bridge state on import.
 - [ ] Produce clearly separated Debug, normal release-like, and performance-validation artifacts.
